@@ -4,7 +4,7 @@ A modern Discord music bot with a real-time web dashboard for queue management.
 
 ## Features
 
-- 🎵 High-quality music playback using YouTube
+- 🎵 High-quality music playback using Spotify
 - 🎛️ Real-time dashboard with queue control
 - 🔄 Loop, shuffle, and autoplay features
 - 🎚️ Volume control and seeking
@@ -122,7 +122,7 @@ pm2 startup
 
 ## Commands
 
-- `/play <query>` - Play music from YouTube
+- `/play <query>` - Play music from Spotify (tracks, playlists, albums)
 - `/pause` - Pause playback
 - `/resume` - Resume playback
 - `/skip` - Skip current song
