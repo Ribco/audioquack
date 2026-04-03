@@ -11,32 +11,34 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       - name: Checkout 🐤
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 🎵
+      - name: Setup Node 🎵
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies 🧩
+      - name: Install 🧩
         run: npm ci
 
-      - name: Build project 🏗️
+      - name: Build 🏗️
         run: npm run build
+
+      # 🔍 IMPORTANT: verify dist exists (prevents silent fail)
+      - name: Verify build output
+        run: |
+          echo "Checking dist..."
+          ls -la dist || (echo "❌ dist folder missing!" && exit 1)
 
       - name: Setup Pages 📄
         uses: actions/configure-pages@v5
@@ -44,11 +46,20 @@ jobs:
       - name: Upload artifact 📦
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # change if needed
+          path: ./
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
       - name: Deploy 🚀
         id: deploy
         uses: actions/deploy-pages@v4
 
-      - name: Finish 🏁
+      - name: Done 🏁
         run: echo "🦆 Quack! AudioQuack is live!"
