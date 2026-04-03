@@ -27,7 +27,7 @@ const path = require('path');
 // CONFIGURATION
 // ==========================================
 const CONFIG = {
-    token: "MTQ4OTU3NDI4NDU3MjQ5NTk0NA.Gao8Zh.0VfxhK7Ge0NAh8qvDdFqt5zXieB9hgjScajm4U",
+    token: process.env.DISCORD_TOKEN,
     clientId: "1489574284572495944",
     clientSecret: "jkttXGJi5fgjl3TjqsFALF_ljqVneaiF",
     dashboardSecret: process.env.DASHBOARD_SECRET || 'super-secret-key-quack-quackify',
