@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Forum</title>
+</head>
+<body>
+
+<h1>🦆 Create Forum</h1>
+
+<input id="title" placeholder="Topic"><br><br>
+<textarea id="content" placeholder="Quack..."></textarea><br><br>
+
+<button onclick="create()">Create</button>
+
+<p id="out"></p>
+
+<script>
+function create() {
+  const t = document.getElementById("title").value;
+  document.getElementById("out").innerText = "Created: " + t;
+}
+</script>
+
+</body>
+</html>
