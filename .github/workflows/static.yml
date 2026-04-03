@@ -1,52 +1,45 @@
-name: 🦆 AudioQuack Deployer
+name: 🦆 AudioQuack Pages Deployer
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout code 🐤
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 🐤
+      - name: Setup Node.js 🎵
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies 🎵
-        run: |
-          echo "Quack! Installing all dependencies..."
-          npm ci
+      - name: Install dependencies 🧩
+        run: npm ci
 
-      - name: Deploy to Server 🚀
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Build project 🏗️
+        run: npm run build
+
+      - name: Setup GitHub Pages 📄
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact 📦
+        uses: actions/upload-pages-artifact@v3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script: |
-            cd ${{ secrets.BOT_PATH || '/root/audioquack' }}
-            
-            # Create/update .env file with GitHub secrets
-            cat > .env << EOF
-            DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
-            DISCORD_CLIENT_SECRET=${{ secrets.DISCORD_CLIENT_SECRET }}
-            DASHBOARD_SECRET=${{ secrets.DASHBOARD_SECRET || 'super-secret-key-quack-quackify' }}
-            CALLBACK_URL=${{ secrets.CALLBACK_URL || 'https://audioquack.bot.nu/auth/discord/callback' }}
-            PORT=${{ secrets.BOT_PORT || 3000 }}
-            EOF
-            
-            git pull origin main
-            npm ci
-            pm2 restart audioquack || pm2 start index.js --name audioquack
-            echo "✅ Bot deployed and restarted with environment secrets!"
+          path: ./dist   # or ./build depending on your project
+
+      - name: Deploy to GitHub Pages 🚀
+        uses: actions/deploy-pages@v4
 
       - name: Done 🏁
-        run: echo "All quacks deployed! Bot is live! 🐥"
+        run: echo "🦆 Quack! Site deployed to GitHub Pages!"
