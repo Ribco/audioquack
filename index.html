@@ -92,6 +92,7 @@
             font-weight: 700;
             background: var(--gradient-1);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
@@ -102,6 +103,7 @@
             font-size: 2rem;
             background: var(--gradient-1);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -166,6 +168,7 @@
             margin-bottom: 20px;
             background: var(--gradient-1);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: titleGlow 3s ease-in-out infinite;
         }
@@ -217,6 +220,12 @@
         .btn-secondary:hover {
             background: var(--card-hover);
             border-color: var(--primary);
+        }
+
+        /* Features Section */
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--glow);
         }
 
         /* Dashboard Grid */
@@ -671,6 +680,7 @@
             font-weight: 700;
             background: var(--gradient-1);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -838,6 +848,11 @@
     
     <div class="loading-screen" id="loading">
         <div class="loader"></div>
+        <div class="loading-progress">
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
         <p>Loading AudioQuack...</p>
     </div>
 
@@ -847,10 +862,10 @@
             AudioQuack
         </div>
         <div class="nav-links">
-            <a href="#features">Features</a>
-            <a href="#commands">Commands</a>
+            <a onclick="showFeatures()" style="cursor: pointer;">Features</a>
+            <a onclick="showCommands()" style="cursor: pointer;">Commands</a>
             <a href="/dashboard">Dashboard</a>
-            <a href="https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1489574284572495944&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">
                 <i class="fab fa-discord"></i>
                 Add to Discord
             </a>
@@ -875,6 +890,89 @@
                     <i class="fas fa-info-circle"></i>
                     Learn More
                 </button>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="features-section" style="display: none; margin-top: 80px;">
+            <h2 style="text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 40px; background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Why Choose AudioQuack?</h2>
+            <div class="features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-music" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Crystal Clear Audio</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Experience music like never before with our advanced audio processing and high-quality streaming.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-tachometer-alt" style="font-size: 3rem; color: var(--secondary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Lightning Fast</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Instant song loading and seamless playback with our optimized infrastructure.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-palette" style="font-size: 3rem; color: var(--success); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Beautiful Dashboard</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Control your music with our sleek, modern web dashboard from any device.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-share-alt" style="font-size: 3rem; color: var(--warning); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Multi-Platform</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Supports Spotify, YouTube, SoundCloud, and more. Just paste a URL or search.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-users" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Community Driven</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Built by music lovers, for music lovers. Join our growing community.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-shield-alt" style="font-size: 3rem; color: var(--danger); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Reliable & Secure</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">99.9% uptime with enterprise-grade security and privacy protection.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-clock" style="font-size: 3rem; color: var(--warning); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">24/7 Uptime</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Never miss a beat with our reliable infrastructure ensuring constant availability.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-rocket" style="font-size: 3rem; color: var(--success); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Easy Setup</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Get started in minutes with simple slash commands and intuitive controls.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-list" style="font-size: 3rem; color: var(--secondary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Custom Playlists</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Create and manage your own playlists with advanced queue management.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commands Section -->
+        <div id="commands" class="commands-section" style="display: none; margin-top: 80px;">
+            <h2 style="text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 40px; background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Bot Commands</h2>
+            <div class="commands-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-play"></i> /play</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Play music from YouTube, Spotify, or SoundCloud</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-pause"></i> /pause</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Pause the current song</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-step-forward"></i> /skip</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Skip to the next song</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-list"></i> /queue</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Show the current queue</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-volume-up"></i> /volume</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Adjust the volume (0-200)</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-redo"></i> /loop</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Toggle loop mode</p>
+                </div>
             </div>
         </div>
 

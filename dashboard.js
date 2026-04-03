@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     setupSocketListeners();
     setupKeyboardShortcuts();
+    
+    // Fallback: hide loading screen after 2 seconds
+    setTimeout(() => {
+        document.getElementById('loading')?.classList.add('hidden');
+    }, 2000);
 });
 
 // ================= AUTH =================
@@ -43,6 +48,26 @@ function showLanding() {
     document.getElementById('landing')?.style.setProperty('display', 'block');
     document.getElementById('dashboard')?.classList.remove('active');
     document.getElementById('userMenu')?.style.setProperty('display', 'none');
+}
+
+function showFeatures() {
+    const features = document.getElementById('features');
+    if (features.style.display === 'none' || features.style.display === '') {
+        features.style.display = 'block';
+        features.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        features.style.display = 'none';
+    }
+}
+
+function showCommands() {
+    const commands = document.getElementById('commands');
+    if (commands.style.display === 'none' || commands.style.display === '') {
+        commands.style.display = 'block';
+        commands.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        commands.style.display = 'none';
+    }
 }
 
 function showDashboard() {
