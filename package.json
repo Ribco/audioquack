@@ -1,0 +1,27 @@
+{
+  "name": "audioquack-bot",
+  "version": "1.0.0",
+  "description": "AudioQuack Discord bot with dashboard server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build": "node build.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@discordjs/voice": "^1.16.0",
+    "@distube/ytdl-core": "^1.0.2",
+    "discord.js": "^14.15.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.6.0",
+    "passport-discord": "^0.2.4",
+    "play-dl": "^1.9.0",
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5",
+    "path": "^0.12.7"
+  }
+}
