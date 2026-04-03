@@ -4,12 +4,10 @@
   "description": "AudioQuack Discord bot with dashboard server",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "build": "node build.js"
+    "start": "node index.js"
   },
   "author": "",
   "license": "MIT",
-  "type": "module",
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
     "@distube/ytdl-core": "^4.16.12",

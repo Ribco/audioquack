@@ -29,7 +29,7 @@ const path = require('path');
 const CONFIG = {
     token: process.env.DISCORD_TOKEN,
     clientId: "1489574284572495944",
-    clientSecret: "jkttXGJi5fgjl3TjqsFALF_ljqVneaiF",
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
     dashboardSecret: process.env.DASHBOARD_SECRET || 'super-secret-key-quack-quackify',
     callbackURL: process.env.CALLBACK_URL || 'https://audioquack.bot.nu/auth/discord/callback',
     port: process.env.PORT || 3000,
@@ -281,7 +281,9 @@ class MusicQueue {
 
     broadcastUpdate() {
         const data = this.getDashboardData();
-        io.to(`guild:${this.guildId}`).emit('queueUpdate', data);
+        if (io) {
+            io.to(`guild:${this.guildId}`).emit('queueUpdate', data);
+        }
     }
 
     getDashboardData() {
