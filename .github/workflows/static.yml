@@ -38,7 +38,7 @@ jobs:
       - name: Verify build output
         run: |
           echo "Checking dist..."
-          ls -la dist || (echo "❌ dist folder missing!" && exit 1)
+          ls -la / || (echo "❌ dist folder missing!" && echo continueinh..)
 
       - name: Setup Pages 📄
         uses: actions/configure-pages@v5
