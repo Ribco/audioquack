@@ -4,7 +4,7 @@
   "description": "AudioQuack Discord bot with dashboard server",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
     "build": "node build.js"
   },
   "author": "",
