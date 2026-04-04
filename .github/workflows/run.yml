@@ -8,23 +8,40 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    environment: production
+    env:
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      CALLBACK_URL: ${{ secrets.CALLBACK_URL }}
+      DASHBOARD_SECRET: ${{ secrets.DASHBOARD_SECRET }}
+      ENABLE_SPOTIFY: "true"
+
     steps:
       - uses: actions/checkout@v3
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
       
       - name: Install dependencies
         run: npm install
-      
+
+      - name: Create .env file from GitHub secrets
+        run: |
+          cat > .env <<EOF
+          DISCORD_TOKEN=${DISCORD_TOKEN}
+          DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+          DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+          SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+          SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+          DASHBOARD_SECRET=${DASHBOARD_SECRET}
+          CALLBACK_URL=${CALLBACK_URL}
+          ENABLE_SPOTIFY=${ENABLE_SPOTIFY}
+          EOF
+
       - name: Run bot
-        env:
-          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-          DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
-          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
-          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-          CALLBACK_URL: ${{ secrets.CALLBACK_URL }}
-          ENABLE_SPOTIFY: "true"
         run: node index.js

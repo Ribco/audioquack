@@ -80,18 +80,23 @@ The bot includes a built-in Express server for the dashboard. Deploy to a VPS or
    # No need to create .env manually - the workflow handles it!
    ```
 
-3. Create a `.env` file on your server with your secrets.
+3. Create a `.env` file on your server with your secrets when deploying manually.
 
-4. Add these secrets to your GitHub repository:
+4. Add these secrets to your GitHub repository or to a GitHub environment named `production`:
    - `SERVER_HOST`: Your server's IP address or domain
    - `SERVER_USER`: SSH username (usually `root` or your user)
    - `SERVER_SSH_KEY`: Private SSH key (generate with `ssh-keygen`)
    - `SERVER_PORT`: SSH port (default 22)
-   - `BOT_PATH`: Path to your bot directory on the server (default `/root/audioquack`)   - `DISCORD_TOKEN`: Your Discord bot token
+   - `BOT_PATH`: Path to your bot directory on the server (default `/root/audioquack`)
+   - `DISCORD_TOKEN`: Your Discord bot token
    - `DISCORD_CLIENT_SECRET`: Discord OAuth2 client secret
+   - `DISCORD_CLIENT_ID`: Discord OAuth2 client ID (optional, defaults to the bundled AudioQuack application)
    - `DASHBOARD_SECRET`: Session secret for dashboard (optional, has default)
    - `CALLBACK_URL`: OAuth2 callback URL (optional, has default)
    - `BOT_PORT`: Port for the bot server (optional, default 3000)
+
+> The `run.yml` workflow now uses GitHub environment secrets and generates a `.env` file automatically for the bot.
+
 5. Add your public SSH key to the server's `~/.ssh/authorized_keys`
 
 6. Push to main branch to trigger deployment

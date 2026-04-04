@@ -7,14 +7,19 @@ async function runBuild() {
     console.log('\x1b[90m------------------------------------------\x1b[0m');
 
     const sourcePath = path.join(__dirname, 'index.html');
-    const targetPath = path.join(__dirname, 'index.html'); // Saves to the current root directory
+    const distDir = path.join(__dirname, 'dist');
+    const targetPath = path.join(distDir, 'index.html');
+
+    if (!fs.existsSync(distDir)) {
+        fs.mkdirSync(distDir, { recursive: true });
+    }
 
     // High-visibility log sequence
     const steps = [
         { label: 'INITIALIZING', color: '\x1b[36m' },
         { label: 'PARSING SOURCE', color: '\x1b[35m' },
         { label: 'OPTIMIZING ASSETS', color: '\x1b[34m' },
-        { label: 'WRITING TO ROOT', color: '\x1b[32m' }
+        { label: 'WRITING TO DIST', color: '\x1b[32m' }
     ];
 
     try {
@@ -23,6 +28,7 @@ async function runBuild() {
         }
 
         const data = fs.readFileSync(sourcePath, 'utf8');
+        const assets = ['dashboard.js'];
 
         for (const step of steps) {
             let dots = '';
@@ -36,6 +42,13 @@ async function runBuild() {
 
         // Finalize Write
         fs.writeFileSync(targetPath, data);
+        assets.forEach((asset) => {
+            const sourceAsset = path.join(__dirname, asset);
+            const targetAsset = path.join(distDir, asset);
+            if (fs.existsSync(sourceAsset)) {
+                fs.copyFileSync(sourceAsset, targetAsset);
+            }
+        });
 
         console.log('\x1b[90m------------------------------------------\x1b[0m');
         console.log('🚀 \x1b[32m%s\x1b[0m', 'BUILD SUCCESSFUL');

@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioQuack - Modern Discord Music Bot</title>
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5865F2;
+            --primary-hover: #4752C4;
+            --secondary: #EB459E;
+            --success: #57F287;
+            --warning: #FEE75C;
+            --danger: #ED4245;
+            --dark: #0a0a0f;
+            --darker: #050508;
+            --card: #111118;
+            --card-hover: #1a1a24;
+            --text: #ffffff;
+            --text-muted: #8b8b9a;
+            --border: #2a2a35;
+            --gradient-1: linear-gradient(135deg, #5865F2 0%, #EB459E 100%);
+            --gradient-2: linear-gradient(135deg, #57F287 0%, #5865F2 100%);
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+            --glow: 0 0 40px rgba(88,101,242,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--darker);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(88,101,242,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(235,69,158,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(87,242,135,0.05) 0%, transparent 50%);
+            animation: bgPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes bgPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(17, 17, 24, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 1000;
+            background: rgba(10,10,15,0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(88,101,242,0.4);
+        }
+
+        /* Main Container */
+        .container {
+            margin-top: 70px;
+            padding: 40px;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            margin-bottom: 40px;
+        }
+
+        .hero h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 20px rgba(88,101,242,0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(88,101,242,0.6);
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--card-hover);
+            border-color: var(--primary);
+        }
+
+        /* Features Section */
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--glow);
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            display: none;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 25px;
+            height: calc(100vh - 150px);
+        }
+
+        .dashboard.active {
+            display: grid;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .guild-list {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .guild-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 8px;
+        }
+
+        .guild-item:hover {
+            background: var(--card-hover);
+        }
+
+        .guild-item.active {
+            background: rgba(88,101,242,0.2);
+            border: 1px solid var(--primary);
+        }
+
+        .guild-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .guild-item .guild-info {
+            flex: 1;
+        }
+
+        .guild-item .guild-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .guild-item .guild-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .status-dot.inactive {
+            background: var(--text-muted);
+            box-shadow: none;
+        }
+
+        /* Main Player Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .now-playing {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .now-playing::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(88,101,242,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .player-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .album-art {
+            width: 250px;
+            height: 250px;
+            border-radius: 20px;
+            object-fit: cover;
+            box-shadow: var(--shadow);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .track-info {
+            flex: 1;
+        }
+
+        .track-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .track-artist {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .progress-container {
+            margin: 25px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-1);
+            border-radius: 3px;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: var(--card-hover);
+            color: var(--text);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .control-btn.play {
+            width: 70px;
+            height: 70px;
+            background: var(--gradient-1);
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px rgba(88,101,242,0.4);
+        }
+
+        .control-btn.play:hover {
+            transform: scale(1.15);
+            box-shadow: 0 8px 30px rgba(88,101,242,0.6);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: var(--text);
+            border-radius: 2px;
+            width: 50%;
+        }
+
+        /* Queue Panel */
+        .queue-panel {
+            background: var(--card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .queue-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .queue-item:hover {
+            background: var(--card-hover);
+        }
+
+        .queue-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .queue-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .queue-item-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .queue-item-artist {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .queue-item-duration {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .queue-item-actions {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .queue-item:hover .queue-item-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            background: var(--danger);
+        }
+
+        /* Search Box */
+        .search-container {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 45px 14px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(88,101,242,0.2);
+        }
+
+        .search-box button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .search-box button:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: var(--glow);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Toggle Switches */
+        .toggle-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .toggle-btn.active {
+            background: rgba(88,101,242,0.2);
+            border-color: var(--primary);
+            color: var(--text);
+        }
+
+        /* Loading Animation */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(88,101,242,0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--darker);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            gap: 20px;
+        }
+
+        .loading-screen.hidden {
+            display: none;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 250px 1fr;
+            }
+            .queue-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            min-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <div class="loading-screen" id="loading">
+        <div class="loader"></div>
+        <div class="loading-progress">
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+        <p>Loading AudioQuack...</p>
+    </div>
+
+    <nav>
+        <div class="logo">
+            <i class="fas fa-music"></i>
+            AudioQuack
+        </div>
+        <div class="nav-links">
+            <a onclick="showFeatures()" style="cursor: pointer;">Features</a>
+            <a onclick="showCommands()" style="cursor: pointer;">Commands</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1489574284572495944&permissions=8&scope=bot%20applications.commands" class="btn btn-primary">
+                <i class="fab fa-discord"></i>
+                Add to Discord
+            </a>
+        </div>
+        <div class="user-menu" id="userMenu" style="display: none;">
+            <span id="username"></span>
+            <img src="" alt="Avatar" class="avatar" id="userAvatar">
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Landing Page -->
+        <div id="landing" class="hero">
+            <h1>Music. Reimagined.</h1>
+            <p>The most advanced Discord music bot with a stunning dashboard, real-time controls, and crystal-clear audio quality.</p>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <a href="/auth/discord" class="btn btn-primary" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Login with Discord
+                </a>
+                <button class="btn btn-secondary" onclick="showFeatures()">
+                    <i class="fas fa-info-circle"></i>
+                    Learn More
+                </button>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="features-section" style="display: none; margin-top: 80px;">
+            <h2 style="text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 40px; background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Why Choose AudioQuack?</h2>
+            <div class="features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-music" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Crystal Clear Audio</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Experience music like never before with our advanced audio processing and high-quality streaming.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-tachometer-alt" style="font-size: 3rem; color: var(--secondary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Lightning Fast</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Instant song loading and seamless playback with our optimized infrastructure.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-palette" style="font-size: 3rem; color: var(--success); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Beautiful Dashboard</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Control your music with our sleek, modern web dashboard from any device.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-share-alt" style="font-size: 3rem; color: var(--warning); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Multi-Platform</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Supports Spotify, YouTube, SoundCloud, and more. Just paste a URL or search.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-users" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Community Driven</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Built by music lovers, for music lovers. Join our growing community.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-shield-alt" style="font-size: 3rem; color: var(--danger); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Reliable & Secure</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">99.9% uptime with enterprise-grade security and privacy protection.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-clock" style="font-size: 3rem; color: var(--warning); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">24/7 Uptime</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Never miss a beat with our reliable infrastructure ensuring constant availability.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-rocket" style="font-size: 3rem; color: var(--success); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Easy Setup</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Get started in minutes with simple slash commands and intuitive controls.</p>
+                </div>
+                <div class="feature-card glass" style="padding: 30px; border-radius: 20px; text-align: center; transition: transform 0.3s;">
+                    <i class="fas fa-list" style="font-size: 3rem; color: var(--secondary); margin-bottom: 20px;"></i>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 15px;">Custom Playlists</h3>
+                    <p style="color: var(--text-muted); line-height: 1.6;">Create and manage your own playlists with advanced queue management.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commands Section -->
+        <div id="commands" class="commands-section" style="display: none; margin-top: 80px;">
+            <h2 style="text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 40px; background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Bot Commands</h2>
+            <div class="commands-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-play"></i> /play</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Play music from YouTube, Spotify, or SoundCloud</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-pause"></i> /pause</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Pause the current song</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-step-forward"></i> /skip</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Skip to the next song</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-list"></i> /queue</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Show the current queue</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-volume-up"></i> /volume</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Adjust the volume (0-200)</p>
+                </div>
+                <div class="command-card glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;"><i class="fas fa-redo"></i> /loop</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Toggle loop mode</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="dashboard">
+            <aside class="sidebar">
+                <div class="guild-list" id="guildList">
+                    <h3 style="margin-bottom: 20px; font-family: 'Space Grotesk', sans-serif;">Your Servers</h3>
+                    <!-- Guilds populated by JS -->
+                </div>
+                
+                <div class="glass" style="padding: 20px; border-radius: 16px;">
+                    <h4 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">QUICK ACTIONS</h4>
+                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="shuffleQueue()">
+                        <i class="fas fa-random"></i> Shuffle
+                    </button>
+                    <button class="btn btn-secondary" style="width: 100%;" onclick="clearQueue()">
+                        <i class="fas fa-trash"></i> Clear Queue
+                    </button>
+                </div>
+            </aside>
+
+            <main class="main-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Servers</div>
+                        <div class="stat-value" id="statServers">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Now Playing</div>
+                        <div class="stat-value" id="statPlaying">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Queue Size</div>
+                        <div class="stat-value" id="statQueue">0</div>
+                    </div>
+                </div>
+
+                <div class="now-playing" id="nowPlaying">
+                    <div class="player-content">
+                        <img src="https://via.placeholder.com/250x250/111118/5865F2?text=No+Song" alt="Album Art" class="album-art" id="albumArt">
+                        <div class="track-info">
+                            <div class="track-title" id="trackTitle">No song playing</div>
+                            <div class="track-artist" id="trackArtist">Select a server to start</div>
+                            
+                            <div class="progress-container">
+                                <div class="progress-bar" id="progressBar" onclick="seek(event)">
+                                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                                </div>
+                                <div class="time-display">
+                                    <span id="currentTime">0:00</span>
+                                    <span id="totalTime">0:00</span>
+                                </div>
+                            </div>
+
+                            <div class="controls">
+                                <button class="control-btn" onclick="previousTrack()" title="Previous">
+                                    <i class="fas fa-step-backward"></i>
+                                </button>
+                                <button class="control-btn play" onclick="togglePlay()" id="playBtn" title="Play/Pause">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="control-btn" onclick="skipTrack()" title="Skip">
+                                    <i class="fas fa-step-forward"></i>
+                                </button>
+                                <button class="control-btn" onclick="toggleLoop()" id="loopBtn" title="Loop">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                                <button class="control-btn" onclick="toggleAutoplay()" id="autoplayBtn" title="Autoplay">
+                                    <i class="fas fa-infinity"></i>
+                                </button>
+                            </div>
+
+                            <div class="volume-control">
+                                <i class="fas fa-volume-down"></i>
+                                <div class="volume-slider" id="volumeSlider" onclick="setVolume(event)">
+                                    <div class="volume-fill" id="volumeFill" style="width: 50%"></div>
+                                </div>
+                                <i class="fas fa-volume-up"></i>
+                                <span id="volumeValue" style="min-width: 45px; text-align: right;">50%</span>
+                            </div>
+
+                            <div class="toggle-group">
+                                <button class="toggle-btn active" id="loopToggle" onclick="setLoop('none')">
+                                    <i class="fas fa-redo"></i> Loop: Off
+                                </button>
+                                <button class="toggle-btn" id="autoplayToggle" onclick="setAutoplay(false)">
+                                    <i class="fas fa-robot"></i> Autoplay: Off
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search for a Spotify song or paste Spotify URL..." onkeypress="handleSearch(event)">
+                        <button onclick="searchSong()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+
+            <aside class="queue-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Up Next</span>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;" id="queueCount">0 songs</span>
+                </div>
+                <div class="queue-list" id="queueList">
+                    <!-- Queue items populated by JS -->
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Replace your current script tags at the bottom with: -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/dashboard.js"></script>
+</body>
+</html>

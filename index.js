@@ -27,12 +27,12 @@ const path = require('path');
 // ==========================================
 const CONFIG = {
     token: process.env.DISCORD_TOKEN,
-    clientId: "1489574284572495944",
+    clientId: process.env.DISCORD_CLIENT_ID || "1489574284572495944",
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
     spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
     dashboardSecret: process.env.DASHBOARD_SECRET || 'super-secret-key-quack-quackify',
-    callbackURL: process.env.CALLBACK_URL || 'https://audioquack.bot.nu/auth/discord/callback',
+    callbackURL: process.env.CALLBACK_URL || `http://localhost:${process.env.PORT || 3000}/auth/discord/callback`,
     port: process.env.PORT || 3000,
     prefix: '!',
     color: 0x5865F2,
@@ -886,8 +886,12 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
-// Login bot
-client.login(CONFIG.token).catch(error => {
-    console.error('Failed to login:', error);
-    process.exit(1);
-});
+// Login bot if a token is provided
+if (!CONFIG.token) {
+    console.warn('⚠️ No DISCORD_TOKEN provided. Starting dashboard only; Discord bot login is disabled.');
+} else {
+    client.login(CONFIG.token).catch(error => {
+        console.error('Failed to login:', error);
+        process.exit(1);
+    });
+}
