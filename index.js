@@ -10,9 +10,10 @@ const {
 } = require('discord.js');
 const { 
     joinVoiceChannel, createAudioPlayer, createAudioResource, 
-    AudioPlayerStatus, VoiceConnectionStatus 
+    AudioPlayerStatus, VoiceConnectionStatus, entersState 
 } = require('@discordjs/voice');
-const play = require('play-dl');
+const { Manager } = require('erela.js');
+const Spotify = require('erela.js-spotify');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -46,24 +47,72 @@ const CONFIG = {
     enableSpotify: process.env.ENABLE_SPOTIFY === 'true',
     enableAutoplay: process.env.ENABLE_AUTOPLAY !== 'false',
     logLevel: process.env.LOG_LEVEL || 'info',
+    // Lavalink configuration
+    lavalink: {
+        host: process.env.LAVALINK_HOST || 'localhost',
+        port: parseInt(process.env.LAVALINK_PORT) || 2333,
+        password: process.env.LAVALINK_PASSWORD || 'youshallnotpass',
+        secure: process.env.LAVALINK_SECURE === 'true'
+    }
 };
 
 // ==========================================
-// PLAY-DL SETUP
+// ERELA.JS SETUP
 // ==========================================
-if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-    CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-    CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
-    play.setToken({
-        spotify: {
-            client_id: CONFIG.spotifyClientId,
-            client_secret: CONFIG.spotifyClientSecret,
+const manager = new Manager({
+    nodes: [{
+        host: CONFIG.lavalink.host,
+        port: CONFIG.lavalink.port,
+        password: CONFIG.lavalink.password,
+        secure: CONFIG.lavalink.secure,
+    }],
+    autoPlay: true,
+    plugins: [
+        new Spotify({
+            clientId: CONFIG.spotifyClientId,
+            clientSecret: CONFIG.spotifyClientSecret,
+        }),
+    ],
+    send: (id, payload) => {
+        const guild = client.guilds.cache.get(id);
+        if (guild) guild.shard.send(payload);
+    },
+});
+
+manager.on('nodeConnect', (node) => {
+    console.log(`✅ Lavalink node connected: ${node.options.identifier}`);
+});
+
+manager.on('nodeError', (node, error) => {
+    console.error(`❌ Lavalink node error: ${error.message}`);
+});
+
+manager.on('trackStart', (player, track) => {
+    const guild = client.guilds.cache.get(player.guild);
+    if (guild) {
+        const queue = queues.get(guild.id);
+        if (queue) {
+            queue.updateNowPlaying(track);
+            queue.broadcastUpdate();
         }
-    });
-    console.log('✅ Spotify integration enabled');
-} else {
-    console.log('⚠️ Spotify integration disabled - configure SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env');
-}
+    }
+});
+
+manager.on('queueEnd', (player) => {
+    const guild = client.guilds.cache.get(player.guild);
+    if (guild) {
+        const queue = queues.get(guild.id);
+        if (queue) {
+            queue.handleQueueEnd();
+        }
+    }
+});
+
+manager.on('playerMove', (player, oldChannel, newChannel) => {
+    if (!newChannel) {
+        player.destroy();
+    }
+});
 
 // ==========================================
 // STATE MANAGEMENT
@@ -94,319 +143,97 @@ class MusicQueue {
         this.guildId = guildId;
         this.voiceChannel = voiceChannel;
         this.textChannel = textChannel;
-        this.songs = [];
-        this.current = 0;
-        this.player = createAudioPlayer();
-        this.connection = null;
-        this.volume = CONFIG.defaultVolume;
-        this.isPlaying = false;
-        this.startTime = null;
-        this.pausedAt = null;
-        
-        this.player.on(AudioPlayerStatus.Idle, () => this.handleIdle());
-        this.player.on(AudioPlayerStatus.Playing, () => {
-            this.isPlaying = true;
-            this.startTime = Date.now();
-            this.broadcastUpdate();
+        this.player = manager.create({
+            guild: guildId,
+            voiceChannel: voiceChannel.id,
+            textChannel: textChannel.id,
+            selfDeafen: true,
         });
-        this.player.on(AudioPlayerStatus.Paused, () => {
-            this.isPlaying = false;
-            this.pausedAt = Date.now();
-            this.broadcastUpdate();
-        });
-        this.player.on('error', error => {
-            console.error('Player error:', error);
-            this.skip();
-        });
+        this.player.connect();
+        queues.set(guildId, this);
     }
 
-    async connect() {
-        this.connection = joinVoiceChannel({
-            channelId: this.voiceChannel.id,
-            guildId: this.guildId,
-            adapterCreator: this.voiceChannel.guild.voiceAdapterCreator,
-        });
-        this.connection.subscribe(this.player);
-        
-        this.connection.on(VoiceConnectionStatus.Disconnected, async () => {
-            try {
-                await Promise.race([
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
-                    new Promise(resolve => this.connection.once(VoiceConnectionStatus.Ready, resolve))
-                ]);
-            } catch {
-                this.destroy();
-            }
-        });
-        return this.connection;
+    async addSong(track) {
+        this.player.queue.add(track);
+        return this.player.queue.size;
     }
 
-    async addSong(song) {
-        if (this.songs.length >= CONFIG.maxQueueSize) throw new Error('Queue full');
-        this.songs.push(song);
-        this.broadcastUpdate();
-        return this.songs.length;
-    }
-
-    async play(index = null) {
-        if (index !== null) this.current = index;
-        if (this.current >= this.songs.length) {
-            if (loops.get(this.guildId) === 'queue') {
-                this.current = 0;
-            } else {
-                this.handleQueueEnd();
-                return;
-            }
-        }
-
-        const song = this.songs[this.current];
-        try {
-            console.log(`Playing: ${song.title} (${song.url})`);
-            
-            let stream;
-            let streamUrl = song.url;
-            
-            if (song.url.includes('spotify.com')) {
-                // For Spotify tracks, search for a streamable version
-                try {
-                    console.log(`Searching for streamable version of: ${song.title} by ${song.author}`);
-                    const searchResults = await play.search(`${song.title} ${song.author} music`, { 
-                        limit: 3,
-                        source: { youtube: 'video' } // Search YouTube for streaming
-                    });
-                    if (searchResults && searchResults.length > 0) {
-                        // Try each result until one works
-                        for (const result of searchResults) {
-                            try {
-                                console.log(`Trying to stream: ${result.url}`);
-                                stream = await play.stream(result.url, { quality: 2 });
-                                if (stream && stream.stream) {
-                                    console.log(`Successfully streaming: ${result.url}`);
-                                    break;
-                                }
-                            } catch (streamError) {
-                                console.log(`Failed to stream ${result.url}:`, streamError.message);
-                                continue;
-                            }
-                        }
-                        if (!stream || !stream.stream) {
-                            throw new Error('No streamable version found');
-                        }
-                    } else {
-                        throw new Error('No search results found');
-                    }
-                } catch (searchError) {
-                    console.log('Spotify search streaming failed:', searchError.message);
-                    throw new Error(`Cannot find streamable version of Spotify track: ${searchError.message}`);
-                }
-            } else {
-                // For YouTube URLs, try direct streaming first
-                try {
-                    stream = await play.stream(song.url, { quality: 2 });
-                } catch (directError) {
-                    console.log('Direct streaming failed, trying alternatives:', directError.message);
-                    // If direct streaming fails, search for the song and try alternatives
-                    try {
-                        const searchResults = await play.search(`${song.title} ${song.author} music`, { 
-                            limit: 3,
-                            source: { youtube: 'video' }
-                        });
-                        if (searchResults && searchResults.length > 0) {
-                            for (const result of searchResults) {
-                                if (result.url === song.url) continue; // Skip the original
-                                try {
-                                    console.log(`Trying alternative: ${result.url}`);
-                                    stream = await play.stream(result.url, { quality: 2 });
-                                    if (stream && stream.stream) {
-                                        console.log(`Successfully streaming alternative: ${result.url}`);
-                                        break;
-                                    }
-                                } catch (altError) {
-                                    console.log(`Failed to stream alternative ${result.url}:`, altError.message);
-                                    continue;
-                                }
-                            }
-                        }
-                        if (!stream || !stream.stream) {
-                            throw new Error('No alternative streams found');
-                        }
-                    } catch (searchError) {
-                        console.log('Alternative search failed:', searchError.message);
-                        throw directError; // Throw original error
-                    }
-                }
-            }
-            
-            if (!stream || !stream.stream) {
-                throw new Error('Failed to get stream');
-            }
-            const resource = createAudioResource(stream.stream, { 
-                inputType: stream.type,
-                inlineVolume: true 
-            });
-            resource.volume.setVolume(this.volume / 100);
-            this.player.play(resource);
-            
-            if (!history.has(this.guildId)) history.set(this.guildId, []);
-            history.get(this.guildId).unshift(song);
-            if (history.get(this.guildId).length > 50) history.get(this.guildId).pop();
-            
-            this.updateNowPlaying(song);
-            this.broadcastUpdate();
-        } catch (error) {
-            console.error('Play error:', error);
-            this.textChannel.send({ embeds: [createEmbed('Error', `Failed to play: ${song.title}\n${error.message}`, CONFIG.errorColor)] });
-            this.skip();
+    async play() {
+        if (!this.player.playing && !this.player.paused) {
+            this.player.play();
         }
     }
 
-    handleIdle() {
-        const loopMode = loops.get(this.guildId) || 'none';
-        if (loopMode === 'track') {
-            this.play(this.current);
-        } else {
-            this.current++;
-            this.play();
+    skip(amount = 1) {
+        for (let i = 0; i < amount - 1; i++) {
+            this.player.queue.shift();
         }
-    }
-
-    handleQueueEnd() {
-        this.isPlaying = false;
-        if (autoplay.get(this.guildId) && CONFIG.enableAutoplay && this.songs.length > 0) {
-            this.handleAutoplay();
-        }
-        this.broadcastUpdate();
-    }
-
-    async handleAutoplay() {
-        const lastSong = this.songs[this.songs.length - 1];
-        try {
-            // Search for tracks by the same artist - try Spotify first if configured
-            let search;
-            if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-                CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-                CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
-                try {
-                    search = await play.search(lastSong.author, { 
-                        limit: 1,
-                        source: { spotify: 'track' }
-                    });
-                } catch (spError) {
-                    console.log('Spotify autoplay search failed, trying YouTube:', spError.message);
-                    search = await play.search(`${lastSong.author} music`, { 
-                        limit: 1,
-                        source: { youtube: 'video' }
-                    });
-                }
-            } else {
-                search = await play.search(`${lastSong.author} music`, { 
-                    limit: 1,
-                    source: { youtube: 'video' }
-                });
-            }
-            if (search[0]) {
-                const song = await createSongFromSearch(search[0], client.user.id);
-                await this.addSong(song);
-                this.play();
-            }
-        } catch (error) {
-            console.error('Autoplay error:', error);
-            this.destroy();
-        }
-    }
-
-    skip() {
         this.player.stop();
-        this.broadcastUpdate();
     }
 
     previous() {
-        if (this.current > 0) {
-            this.current -= 2;
+        const previousTrack = this.player.queue.previous?.pop();
+        if (previousTrack) {
+            this.player.queue.splice(0, 0, previousTrack);
             this.player.stop();
         }
     }
 
     pause() {
-        this.player.pause();
+        this.player.pause(true);
     }
 
     resume() {
-        this.player.unpause();
+        this.player.pause(false);
     }
 
     stop() {
-        this.songs = [];
-        this.current = 0;
+        this.player.queue.clear();
         this.player.stop();
-        this.isPlaying = false;
-        this.broadcastUpdate();
     }
 
     shuffle() {
-        const current = this.songs[this.current];
-        const remaining = this.songs.slice(this.current + 1);
-        for (let i = remaining.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
-        }
-        this.songs = [...this.songs.slice(0, this.current + 1), ...remaining];
-        this.broadcastUpdate();
+        this.player.queue.shuffle();
     }
 
     setVolume(vol) {
-        this.volume = Math.max(0, Math.min(CONFIG.maxVolume, vol));
-        if (this.player.state.resource) {
-            this.player.state.resource.volume.setVolume(this.volume / 100);
-        }
-        this.broadcastUpdate();
+        this.player.setVolume(vol / 100);
     }
 
-    remove(index) {
-        if (index > this.current && index < this.songs.length) {
-            const removed = this.songs.splice(index, 1)[0];
-            this.broadcastUpdate();
-            return removed;
+    remove(position) {
+        if (position > 0 && position <= this.player.queue.size) {
+            return this.player.queue.remove(position - 1);
         }
         return null;
     }
 
-    move(from, to) {
-        if (from > this.current && to > this.current && from < this.songs.length && to < this.songs.length) {
-            const [song] = this.songs.splice(from, 1);
-            this.songs.splice(to, 0, song);
-            this.broadcastUpdate();
-            return true;
-        }
-        return false;
-    }
-
-    jump(index) {
-        if (index >= 0 && index < this.songs.length) {
-            this.current = index - 1;
-            this.skip();
+    jump(position) {
+        if (position >= 0 && position < this.player.queue.size) {
+            this.player.queue.splice(0, position);
+            this.player.stop();
             return true;
         }
         return false;
     }
 
     destroy() {
-        this.connection?.destroy();
+        this.player.destroy();
         queues.delete(this.guildId);
         nowPlayingMessages.delete(this.guildId);
         this.broadcastUpdate();
     }
 
     getProgress() {
-        if (!this.isPlaying || !this.startTime) return 0;
-        const elapsed = (Date.now() - this.startTime) / 1000;
-        return Math.min(elapsed, this.songs[this.current]?.durationSec || 0);
+        if (this.player.playing && this.player.position) {
+            return this.player.position / 1000;
+        }
+        return 0;
     }
 
     broadcastUpdate() {
         const data = this.getDashboardData();
         if (io) {
-            io.to(`guild:${this.guildId}`).emit('queueUpdate', data);
+            io.to(this.guildId).emit('queueUpdate', data);
         }
     }
 
@@ -415,28 +242,46 @@ class MusicQueue {
             guildId: this.guildId,
             guildName: this.voiceChannel.guild.name,
             guildIcon: this.voiceChannel.guild.iconURL(),
-            isPlaying: this.isPlaying,
-            currentSong: this.songs[this.current] || null,
-            queue: this.songs.slice(this.current + 1),
+            isPlaying: this.player.playing,
+            currentSong: this.player.queue.current ? {
+                id: this.player.queue.current.identifier,
+                title: this.player.queue.current.title,
+                author: this.player.queue.current.author,
+                url: this.player.queue.current.uri,
+                thumbnail: this.player.queue.current.thumbnail,
+                duration: formatDuration(this.player.queue.current.duration / 1000),
+                durationSec: this.player.queue.current.duration / 1000,
+                requestedBy: this.player.queue.current.requester?.id || 'Unknown',
+            } : null,
+            queue: this.player.queue.slice(1, 11).map(track => ({
+                id: track.identifier,
+                title: track.title,
+                author: track.author,
+                url: track.uri,
+                thumbnail: track.thumbnail,
+                duration: formatDuration(track.duration / 1000),
+                durationSec: track.duration / 1000,
+                requestedBy: track.requester?.id || 'Unknown',
+            })),
             history: (history.get(this.guildId) || []).slice(0, 10),
-            volume: this.volume,
-            loop: loops.get(this.guildId) || 'none',
+            volume: Math.round(this.player.volume * 100),
+            loop: 'none', // Erela.js handles this differently
             autoplay: autoplay.get(this.guildId) || false,
             progress: this.getProgress(),
-            listeners: this.voiceChannel.members.size - 1, // Exclude bot
+            listeners: this.voiceChannel.members.size - 1,
         };
     }
 
-    async updateNowPlaying(song) {
+    async updateNowPlaying(track) {
         const embed = new EmbedBuilder()
             .setTitle('🎵 Now Playing')
-            .setDescription(`[${song.title}](${song.url})`)
+            .setDescription(`[${track.title}](${track.uri})`)
             .addFields(
-                { name: 'Artist', value: song.author, inline: true },
-                { name: 'Duration', value: song.duration, inline: true },
-                { name: 'Requested by', value: `<@${song.requestedBy}>`, inline: true }
+                { name: 'Artist', value: track.author, inline: true },
+                { name: 'Duration', value: formatDuration(track.duration / 1000), inline: true },
+                { name: 'Requested by', value: `<@${track.requester?.id || 'Unknown'}>`, inline: true }
             )
-            .setThumbnail(song.thumbnail)
+            .setThumbnail(track.thumbnail)
             .setColor(CONFIG.color)
             .setTimestamp();
 
@@ -451,10 +296,37 @@ class MusicQueue {
 
         const oldMsg = nowPlayingMessages.get(this.guildId);
         if (oldMsg) {
-            try { await oldMsg.delete(); } catch {}
+            try {
+                await oldMsg.delete();
+            } catch {}
         }
         const msg = await this.textChannel.send({ embeds: [embed], components: [row] });
         nowPlayingMessages.set(this.guildId, msg);
+    }
+
+    handleQueueEnd() {
+        if (autoplay.get(this.guildId) && CONFIG.enableAutoplay) {
+            this.handleAutoplay();
+        }
+        this.broadcastUpdate();
+    }
+
+    async handleAutoplay() {
+        const lastSong = this.player.queue.previous?.[0] || this.player.queue.current;
+        if (!lastSong) return;
+
+        try {
+            const searchResults = await manager.search(`${lastSong.author}`, this.player);
+            if (searchResults && searchResults.tracks && searchResults.tracks.length > 0) {
+                const randomTrack = searchResults.tracks[Math.floor(Math.random() * Math.min(searchResults.tracks.length, 5))];
+                this.player.queue.add(randomTrack);
+                if (!this.player.playing && !this.player.paused) {
+                    this.player.play();
+                }
+            }
+        } catch (error) {
+            console.error('Autoplay error:', error);
+        }
     }
 }
 
@@ -485,8 +357,8 @@ function formatDuration(seconds) {
 // SLASH COMMANDS
 // ==========================================
 const commands = [
-    new SlashCommandBuilder().setName('play').setDescription('Play music from YouTube, Spotify, or search').addStringOption(opt => opt.setName('query').setDescription('Song name, YouTube URL, or Spotify track URL').setRequired(true)),
-    new SlashCommandBuilder().setName('search').setDescription('Search for music tracks').addStringOption(opt => opt.setName('query').setDescription('Search term').setRequired(true)),
+    new SlashCommandBuilder().setName('play').setDescription('Play music from Spotify').addStringOption(opt => opt.setName('query').setDescription('Song name or Spotify track URL').setRequired(true)),
+    new SlashCommandBuilder().setName('search').setDescription('Search Spotify tracks').addStringOption(opt => opt.setName('query').setDescription('Search term').setRequired(true)),
     new SlashCommandBuilder().setName('skip').setDescription('Skip song').addIntegerOption(opt => opt.setName('amount').setDescription('Skip count')),
     new SlashCommandBuilder().setName('previous').setDescription('Previous song'),
     new SlashCommandBuilder().setName('stop').setDescription('Stop and clear'),
@@ -523,8 +395,8 @@ client.once('ready', async () => {
 function updatePresence() {
     const guildCount = client.guilds.cache.size;
     client.user.setPresence({
-        activities: [{ name: `Spotify | ${guildCount} servers`, type: 2 }], // Listening
-        status: 'dnd',
+        activities: [{ name: `Spotify Music | ${guildCount} servers`, type: 2 }], // Listening
+        status: 'online',
     });
 }
 
@@ -554,108 +426,38 @@ client.on('interactionCreate', async interaction => {
                 if (!queue) {
                     queue = new MusicQueue(guildId, voiceChannel, channel);
                     queues.set(guildId, queue);
-                    await queue.connect();
                 } else if (queue.voiceChannel.id !== voiceChannel.id) {
                     return interaction.editReply({ embeds: [createEmbed('Error', 'Already playing elsewhere!', CONFIG.errorColor)] });
                 }
 
-                let searchResult;
-                if (query.includes('spotify.com') || query.includes('open.spotify.com')) {
-                    console.log(`Getting Spotify content for URL: ${query}`);
-                    if (query.includes('/playlist/')) {
-                        throw new Error('Playlists are not yet supported. Please use individual track URLs only.');
-                    } else if (query.includes('/album/')) {
-                        throw new Error('Albums are not yet supported. Please use individual track URLs only.');
-                    } else if (query.includes('/track/')) {
-                        try {
-                            // Get Spotify track info using play-dl
-                            const trackInfo = await play.spotify(query);
-                            console.log(`Processing Spotify track: ${trackInfo.name} by ${trackInfo.artists[0].name}`);
-                            
-                            searchResult = { 
-                                video_details: {
-                                    id: trackInfo.id,
-                                    title: trackInfo.name,
-                                    author: trackInfo.artists[0].name,
-                                    url: query,
-                                    duration_ms: trackInfo.durationInMs,
-                                    thumbnail: trackInfo.thumbnail?.url || 'https://i.scdn.co/image/ab67616d0000b273000000000000000000000000'
-                                }
-                            };
-                        } catch (error) {
-                            console.error('Spotify track processing error:', error);
-                            throw new Error(`Failed to process Spotify track: ${error.message}`);
-                        }
-                    } else {
-                        throw new Error('Unsupported Spotify URL type. Please use individual track URLs.');
-                    }
-                } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                    try {
-                        console.log(`Getting YouTube content for URL: ${query}`);
-                        const videoInfo = await play.video_info(query);
-                        searchResult = { video_details: videoInfo.video_details };
-                    } catch (error) {
-                        console.error('YouTube URL processing error:', error);
-                        throw new Error(`Failed to process YouTube URL: ${error.message}`);
-                    }
-                } else {
-                    // General search - try Spotify first if configured, then YouTube
+                try {
                     console.log(`Searching for: ${query}`);
-                    try {
-                        // Try Spotify search first if configured
-                        if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-                            CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-                            CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
-                            const spResults = await play.search(query, { 
-                                limit: 1, 
-                                source: { spotify: 'track' } 
-                            });
-                            if (spResults && spResults[0]) {
-                                searchResult = { video_details: spResults[0] };
-                            } else {
-                                throw new Error('No Spotify results found');
-                            }
-                        } else {
-                            throw new Error('Spotify not configured, trying YouTube');
-                        }
-                    } catch (spError) {
-                        console.log('Spotify search failed, trying YouTube:', spError.message);
-                        try {
-                            // Try YouTube search with music-specific query
-                            const ytResults = await play.search(`${query} music`, { 
-                                limit: 5,  // Get more results to find a streamable one
-                                source: { youtube: 'video' } 
-                            });
-                            if (ytResults && ytResults.length > 0) {
-                                // Find the first result that looks like music (has duration, etc.)
-                                const musicResult = ytResults.find(r => r.durationInSec && r.durationInSec > 30 && r.durationInSec < 600); // 30s to 10min
-                                searchResult = { video_details: musicResult || ytResults[0] };
-                            } else {
-                                throw new Error('No YouTube results found');
-                            }
-                        } catch (ytError) {
-                            console.error('Both Spotify and YouTube search failed');
-                            throw new Error(`No results found for "${query}"`);
-                        }
+                    const searchResults = await manager.search(query, interaction.user);
+                    
+                    if (!searchResults || !searchResults.tracks || searchResults.tracks.length === 0) {
+                        return interaction.editReply({ embeds: [createEmbed('No Results', 'No tracks found for that search', CONFIG.errorColor)] });
                     }
-                }
 
-                const song = await createSongFromSearch(searchResult.video_details, user.id);
-                const position = await queue.addSong(song);
-                
-                if (position === 1 && !queue.isPlaying) {
-                    await queue.play();
-                    await interaction.editReply({ embeds: [createEmbed('🎵 Playing', `[${song.title}](${song.url})`, CONFIG.successColor)] });
-                } else {
-                    await interaction.editReply({ embeds: [createEmbed('✅ Added', `[${song.title}](${song.url}) - #${position}`, CONFIG.successColor)] });
+                    const track = searchResults.tracks[0];
+                    track.requester = interaction.user;
+                    
+                    queue.addSong(track);
+                    
+                    if (queue.player.queue.size === 1 && !queue.player.playing && !queue.player.paused) {
+                        queue.play();
+                    }
+                    
+                    await interaction.editReply({ embeds: [createEmbed('🎵 Added to Queue', `[${track.title}](${track.uri}) by ${track.author}`, CONFIG.successColor)] });
+                } catch (error) {
+                    console.error('Play command error:', error);
+                    await interaction.editReply({ embeds: [createEmbed('Error', `Failed to play: ${error.message}`, CONFIG.errorColor)] });
                 }
                 break;
             }
             case 'skip': {
                 if (!queue) return interaction.reply({ embeds: [createEmbed('Error', 'Nothing playing', CONFIG.errorColor)], ephemeral: true });
                 const amount = interaction.options.getInteger('amount') || 1;
-                queue.current += amount - 1;
-                queue.skip();
+                queue.skip(amount);
                 interaction.reply({ embeds: [createEmbed('⏭️ Skipped', `Skipped ${amount}`, CONFIG.successColor)] });
                 break;
             }
@@ -678,15 +480,16 @@ client.on('interactionCreate', async interaction => {
                 break;
             }
             case 'queue': {
-                if (!queue || !queue.songs.length) return interaction.reply({ embeds: [createEmbed('Queue', 'Empty', CONFIG.color)] });
+                if (!queue || !queue.player.queue.current) return interaction.reply({ embeds: [createEmbed('Queue', 'Empty', CONFIG.color)] });
                 const page = (interaction.options.getInteger('page') || 1) - 1;
                 const perPage = 10;
+                const tracks = queue.player.queue.slice(0, queue.player.queue.size);
                 const start = page * perPage;
-                const desc = queue.songs.slice(start, start + perPage).map((s, i) => {
+                const desc = tracks.slice(start, start + perPage).map((track, i) => {
                     const idx = start + i;
-                    return `${idx === queue.current ? '▶️' : idx + 1}. [${s.title}](${s.url}) | \`${s.duration}\``;
+                    return `${idx === 0 ? '▶️' : idx + 1}. [${track.title}](${track.uri}) | \`${formatDuration(track.duration / 1000)}\``;
                 }).join('\n');
-                interaction.reply({ embeds: [createEmbed(`📋 Queue (${queue.songs.length})`, desc || 'Empty', CONFIG.color)] });
+                interaction.reply({ embeds: [createEmbed(`📋 Queue (${tracks.length})`, desc || 'Empty', CONFIG.color)] });
                 break;
             }
             case 'volume': {
@@ -726,43 +529,17 @@ client.on('interactionCreate', async interaction => {
                 await interaction.deferReply();
                 
                 try {
-                    let results;
-                    let source = 'Spotify';
+                    const searchResults = await manager.search(query, interaction.user);
                     
-                    // Try Spotify search first if configured
-                    if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-                        CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-                        CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
-                        try {
-                            results = await play.search(query, { 
-                                limit: CONFIG.searchLimit,
-                                source: { spotify: 'track' }
-                            });
-                        } catch (spError) {
-                            console.log('Spotify search failed, trying YouTube:', spError.message);
-                            source = 'YouTube';
-                            results = await play.search(`${query} music`, { 
-                                limit: CONFIG.searchLimit,
-                                source: { youtube: 'video' }
-                            });
-                        }
-                    } else {
-                        source = 'YouTube';
-                        results = await play.search(`${query} music`, { 
-                            limit: CONFIG.searchLimit,
-                            source: { youtube: 'video' }
-                        });
+                    if (!searchResults || !searchResults.tracks || searchResults.tracks.length === 0) {
+                        return interaction.editReply({ embeds: [createEmbed('No Results', 'No tracks found for that search', CONFIG.errorColor)] });
                     }
                     
-                    if (!results || results.length === 0) {
-                        return interaction.editReply({ embeds: [createEmbed('No Results', `No ${source} results found for that search`, CONFIG.errorColor)] });
-                    }
-                    
-                    const desc = results.slice(0, CONFIG.searchLimit).map((song, i) => 
-                        `${i + 1}. [${song.title}](${song.url}) - ${song.artist || song.author || song.artists?.[0]?.name || 'Unknown'}`
+                    const desc = searchResults.tracks.slice(0, CONFIG.searchLimit).map((track, i) => 
+                        `${i + 1}. [${track.title}](${track.uri}) - ${track.author}`
                     ).join('\n');
                     
-                    const embed = createEmbed(`🔍 ${source} Search Results for "${query}"`, desc, CONFIG.color);
+                    const embed = createEmbed(`🔍 Search Results for "${query}"`, desc, CONFIG.color);
                     embed.setFooter({ text: 'Use /play with the song name or URL to add to queue' });
                     
                     interaction.editReply({ embeds: [embed] });
@@ -773,15 +550,15 @@ client.on('interactionCreate', async interaction => {
                 break;
             }
             case 'nowplaying': {
-                if (!queue || !queue.songs[queue.current]) return interaction.reply({ embeds: [createEmbed('Nothing Playing', 'No song is currently playing', CONFIG.color)] });
-                const song = queue.songs[queue.current];
+                if (!queue || !queue.player.queue.current) return interaction.reply({ embeds: [createEmbed('Nothing Playing', 'No song is currently playing', CONFIG.color)] });
+                const song = queue.player.queue.current;
                 const embed = new EmbedBuilder()
                     .setTitle('🎵 Now Playing')
-                    .setDescription(`[${song.title}](${song.url})`)
+                    .setDescription(`[${song.title}](${song.uri})`)
                     .addFields(
                         { name: 'Artist', value: song.author, inline: true },
-                        { name: 'Duration', value: song.duration, inline: true },
-                        { name: 'Requested by', value: `<@${song.requestedBy}>`, inline: true }
+                        { name: 'Duration', value: formatDuration(song.duration / 1000), inline: true },
+                        { name: 'Requested by', value: `<@${song.requester?.id || 'Unknown'}>`, inline: true }
                     )
                     .setThumbnail(song.thumbnail)
                     .setColor(CONFIG.color);
@@ -812,12 +589,12 @@ client.on('interactionCreate', async interaction => {
                 break;
             }
             case 'stats': {
-                const playing = Array.from(queues.values()).filter(q => q.isPlaying).length;
+                const playing = Array.from(queues.values()).filter(q => q.player.playing).length;
                 interaction.reply({ embeds: [createEmbed('📊 Stats', `Servers: ${client.guilds.cache.size}\nPlaying: ${playing}\nUptime: ${formatDuration(Math.floor(client.uptime / 1000))}`, CONFIG.color)] });
                 break;
             }
             case 'help': {
-                interaction.reply({ embeds: [createEmbed('🎵 Music Commands', '/play (song name, YouTube URL, or Spotify track URL), /search, /nowplaying, /pause, /resume, /skip, /stop, /queue, /volume, /loop, /shuffle, /remove, /clear, /autoplay, /disconnect, /stats', CONFIG.color)] });
+                interaction.reply({ embeds: [createEmbed('🎵 Spotify Music Commands', '/play (song name or Spotify track URL), /search, /nowplaying, /pause, /resume, /skip, /stop, /queue, /volume, /loop, /shuffle, /remove, /clear, /autoplay, /disconnect, /stats', CONFIG.color)] });
                 break;
             }
         }
@@ -865,8 +642,8 @@ async function handleButton(interaction) {
             const current = loops.get(guildId) || 'none';
             loops.set(guildId, modes[(modes.indexOf(current) + 1) % modes.length]);
             queue.broadcastUpdate();
-            if (queue.songs[queue.current]) {
-                queue.updateNowPlaying(queue.songs[queue.current]);
+            if (queue.player.queue.current) {
+                queue.updateNowPlaying(queue.player.queue.current);
             }
             break;
         }
@@ -980,18 +757,15 @@ app.post('/api/guild/:id/control', requireAuth, async (req, res) => {
         case 'jump': queue.jump(data.index); break;
         case 'add': {
             try {
-                const results = await play.search(data.query, { 
-                    limit: 1,
-                    source: { spotify: 'track' }
-                });
-                if (results[0]) {
-                    const song = await createSongFromSearch(results[0], req.user.id);
-                    await queue.addSong(song);
-                    if (!queue.isPlaying) await queue.play();
+                const results = await manager.search(data.query, queue.player);
+                const track = results.tracks?.[0];
+                if (track) {
+                    await queue.addSong(track);
+                    if (!queue.player.playing && !queue.player.paused) await queue.play();
                 }
             } catch (error) {
                 console.error('Dashboard add error:', error);
-                // Perhaps send an error response, but since it's socket, maybe not
+                // Optionally improve error handling for the dashboard flow
             }
             break;
         }

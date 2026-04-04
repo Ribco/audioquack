@@ -1,10 +1,10 @@
 # AudioQuack 🤖🎵
 
-A modern Discord music bot with a real-time web dashboard for queue management.
+A modern Discord music bot with a real-time web dashboard for queue management using Erela.js and Lavalink.
 
 ## Features
 
-- 🎵 High-quality music playback using YouTube and Spotify
+- 🎵 High-quality music playback using Spotify
 - 🎛️ Real-time dashboard with queue control
 - 🔄 Loop, shuffle, and autoplay features
 - 🎚️ Volume control and seeking
@@ -17,6 +17,7 @@ A modern Discord music bot with a real-time web dashboard for queue management.
 ### Prerequisites
 
 - Node.js 20+
+- Lavalink server (for audio processing)
 - A Discord bot token
 - Discord application with OAuth2 setup
 
@@ -33,13 +34,18 @@ A modern Discord music bot with a real-time web dashboard for queue management.
    npm install
    ```
 
-3. Copy the environment file and configure it:
+3. Set up Lavalink:
+   - Download Lavalink from https://github.com/freyacodes/Lavalink/releases
+   - Create `application.yml` config file
+   - Run Lavalink: `java -jar Lavalink.jar`
+
+4. Copy the environment file and configure it:
    ```bash
    cp .env.example .env
    # Edit .env with your bot token and secrets
    ```
 
-4. Start the bot:
+5. Start the bot:
    ```bash
    npm start
    ```
@@ -47,6 +53,54 @@ A modern Discord music bot with a real-time web dashboard for queue management.
 ### Environment Variables
 
 See `.env.example` for required configuration.
+
+### Lavalink Configuration
+
+The bot requires a Lavalink server for audio processing. You can:
+
+1. **Use a public Lavalink server** (not recommended for production)
+2. **Run your own Lavalink server** (recommended)
+
+Example `application.yml` for Lavalink:
+```yaml
+server:
+  port: 2333
+  address: 0.0.0.0
+lavalink:
+  server:
+    password: "youshallnotpass"
+    sources:
+      youtube: true
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+    filters:
+      volume: true
+      equalizer: true
+      karaoke: true
+      timescale: true
+      tremolo: true
+      vibrato: true
+      distortion: true
+      rotation: true
+    plugins:
+      - dependency: "com.github.topisenpai:lavasrc-plugin:4.0.1"
+        repository: "https://maven.topi.wtf/releases"
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    opusEncodingQuality: 10
+    resamplingQuality: LOW
+    trackStuckThresholdMs: 10000
+    useSeekGhosting: true
+    youtubePlaylistLoadLimit: 6
+    playerUpdateIntervalMs: 5
+    youtubeSearchEnabled: true
+    soundcloudSearchEnabled: true
+    gc-warnings: true
+```
 
 ### Discord Bot Setup
 
@@ -57,7 +111,7 @@ See `.env.example` for required configuration.
 5. Go to "OAuth2" section and copy client secret to `DISCORD_CLIENT_SECRET`
 6. Set redirect URI to your callback URL (default: `https://audioquack.bot.nu/auth/discord/callback`)
 
-### Spotify Integration Setup (Optional)
+### Spotify Integration Setup
 
 To enable Spotify search and playback:
 
@@ -138,7 +192,7 @@ pm2 startup
 
 ## Commands
 
-- `/play <query>` - Play music from YouTube, Spotify (tracks, playlists, albums)
+- `/play <query>` - Play music from Spotify (tracks, playlists, albums)
 - `/pause` - Pause playback
 - `/resume` - Resume playback
 - `/skip` - Skip current song
