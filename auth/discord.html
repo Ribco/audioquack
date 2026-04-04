@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Discord Login Simulation</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align:center; margin-top:50px; }
+  input { padding: 8px; margin: 5px; width: 200px; }
+  button { padding: 10px 20px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div id="login-page">
+  <h1>Login with Discord</h1>
+  <button id="login-btn">Login</button>
+</div>
+
+<div id="form-page" style="display:none;">
+  <h1>Enter Your Info</h1>
+  <input type="text" id="username" placeholder="Username" required><br>
+  <input type="email" id="email" placeholder="Email" required><br>
+  <button id="submit-btn">Submit</button>
+</div>
+
+<div id="welcome-page" style="display:none;">
+  <h1>Welcome!</h1>
+  <p id="welcome-msg"></p>
+</div>
+
+<script>
+const loginPage = document.getElementById("login-page");
+const formPage = document.getElementById("form-page");
+const welcomePage = document.getElementById("welcome-page");
+const loginBtn = document.getElementById("login-btn");
+const submitBtn = document.getElementById("submit-btn");
+const welcomeMsg = document.getElementById("welcome-msg");
+
+// If URL has username/email, show welcome
+const urlParams = new URLSearchParams(window.location.search);
+const username = urlParams.get("username");
+const email = urlParams.get("email");
+if(username && email) {
+  loginPage.style.display = "none";
+  formPage.style.display = "none";
+  welcomePage.style.display = "block";
+  welcomeMsg.textContent = `Username: ${username}, Email: ${email}`;
+}
+
+// Step 1: Click login
+loginBtn.addEventListener("click", () => {
+  loginPage.style.display = "none";
+  formPage.style.display = "block";
+});
+
+// Step 2: Submit username/email
+submitBtn.addEventListener("click", () => {
+  const user = document.getElementById("username").value.trim();
+  const mail = document.getElementById("email").value.trim();
+  if(!user || !mail) {
+    alert("Please fill both fields!");
+    return;
+  }
+  // Redirect to index.html with query params
+  window.location.href = `/index.html?username=${encodeURIComponent(user)}&email=${encodeURIComponent(mail)}`;
+});
+</script>
+
+</body>
+</html>
