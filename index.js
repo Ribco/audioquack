@@ -521,12 +521,17 @@ client.on('interactionCreate', async interaction => {
                     throw new Error('YouTube is not supported. Please use Spotify tracks, playlists, or albums only!');
                 } else {
                     console.log(`Searching Spotify for: ${query}`);
-                    const results = await play.search(query, { 
-                        limit: 1, 
-                        source: { spotify: 'track' } 
-                    });
-                    if (!results || !results[0]) throw new Error('No Spotify results found for that search');
-                    searchResult = { video_details: results[0] };
+                    try {
+                        const results = await play.search(query, { 
+                            limit: 1, 
+                            source: { spotify: 'track' } 
+                        });
+                        if (!results || !results[0]) throw new Error('No Spotify results found for that search');
+                        searchResult = { video_details: results[0] };
+                    } catch (error) {
+                        console.error('Spotify search error:', error);
+                        throw new Error(`Failed to search Spotify for "${query}": ${error.message}`);
+                    }
                 }
 
                 const song = await createSongFromSearch(searchResult.video_details, user.id);
@@ -614,15 +619,16 @@ client.on('interactionCreate', async interaction => {
                 const query = interaction.options.getString('query');
                 await interaction.deferReply();
                 
-                const results = await play.search(query, { 
-                    limit: CONFIG.searchLimit,
-                    source: { spotify: 'track' }
-                });
-                if (!results || results.length === 0) {
-                    return interaction.editReply({ embeds: [createEmbed('No Results', 'No Spotify tracks found for that search', CONFIG.errorColor)] });
-                }
-                
-                const desc = results.slice(0, CONFIG.searchLimit).map((song, i) => 
+                try {
+                    const results = await play.search(query, { 
+                        limit: CONFIG.searchLimit,
+                        source: { spotify: 'track' }
+                    });
+                    if (!results || results.length === 0) {
+                        return interaction.editReply({ embeds: [createEmbed('No Results', 'No Spotify tracks found for that search', CONFIG.errorColor)] });
+                    }
+                    
+                    const desc = results.slice(0, CONFIG.searchLimit).map((song, i) => 
                     `${i + 1}. [${song.title}](${song.url}) - ${song.artist || song.author || 'Unknown'}`
                 ).join('\n');
                 
@@ -630,6 +636,10 @@ client.on('interactionCreate', async interaction => {
                 embed.setFooter({ text: 'Use /play with the song name or Spotify URL to add to queue' });
                 
                 interaction.editReply({ embeds: [embed] });
+                } catch (error) {
+                    console.error('Search command error:', error);
+                    interaction.editReply({ embeds: [createEmbed('Search Error', `Failed to search for "${query}": ${error.message}`, CONFIG.errorColor)] });
+                }
                 break;
             }
             case 'nowplaying': {
@@ -839,14 +849,19 @@ app.post('/api/guild/:id/control', requireAuth, async (req, res) => {
         case 'remove': queue.remove(data.index); break;
         case 'jump': queue.jump(data.index); break;
         case 'add': {
-            const results = await play.search(data.query, { 
-                limit: 1,
-                source: { spotify: 'track' }
-            });
-            if (results[0]) {
-                const song = await createSongFromSearch(results[0], req.user.id);
-                await queue.addSong(song);
-                if (!queue.isPlaying) await queue.play();
+            try {
+                const results = await play.search(data.query, { 
+                    limit: 1,
+                    source: { spotify: 'track' }
+                });
+                if (results[0]) {
+                    const song = await createSongFromSearch(results[0], req.user.id);
+                    await queue.addSong(song);
+                    if (!queue.isPlaying) await queue.play();
+                }
+            } catch (error) {
+                console.error('Dashboard add error:', error);
+                // Perhaps send an error response, but since it's socket, maybe not
             }
             break;
         }
