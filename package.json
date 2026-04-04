@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "AudioQuack Discord bot with dashboard server",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
+    "dev": "node index.js",
     "build": "node build.js"
   },
   "author": "",
@@ -15,17 +17,17 @@
   },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
-    "@discordjs/voice": "^0.18.1",
-    "cors": "^2.8.6",
+    "@discordjs/voice": "^0.18.0",
+    "cors": "^2.8.5",
     "discord.js": "^14.26.0",
-    "dotenv": "^17.4.0",
-    "express": "^5.2.1",
-    "express-session": "^1.19.0",
+    "dotenv": "^17.0.0",
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
     "ffmpeg-static": "^5.2.0",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
     "play-dl": "^1.9.7",
-    "socket.io": "^4.8.3",
+    "socket.io": "^4.7.5",
     "sodium-native": "^4.0.0"
   }
 }
