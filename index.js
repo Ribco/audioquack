@@ -683,31 +683,51 @@ client.on('interactionCreate', async interaction => {
         }
     } catch (error) {
         console.error(error);
-        interaction.reply({ embeds: [createEmbed('Error', error.message, CONFIG.errorColor)], ephemeral: true });
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply({ embeds: [createEmbed('Error', error.message, CONFIG.errorColor)], ephemeral: true }).catch(() => {});
+        } else {
+            await interaction.reply({ embeds: [createEmbed('Error', error.message, CONFIG.errorColor)], ephemeral: true }).catch(() => {});
+        }
     }
 });
 
 async function handleButton(interaction) {
     const { customId, guildId, member } = interaction;
     const queue = queues.get(guildId);
-    if (!queue) return;
-    
+    if (!queue) {
+        return interaction.reply({ embeds: [createEmbed('Error', 'No active queue', CONFIG.errorColor)], ephemeral: true }).catch(() => {});
+    }
     if (member.voice.channel?.id !== queue.voiceChannel.id) {
-        return interaction.reply({ embeds: [createEmbed('Error', 'Join voice channel first!', CONFIG.errorColor)], ephemeral: true });
+        return interaction.reply({ embeds: [createEmbed('Error', 'Join voice channel first!', CONFIG.errorColor)], ephemeral: true }).catch(() => {});
     }
 
     await interaction.deferUpdate().catch(() => {});
     
     switch (customId) {
-        case 'prev': queue.previous(); break;
-        case 'pause': queue.pause(); break;
-        case 'skip': queue.skip(); break;
-        case 'stop': queue.stop(); break;
+        case 'prev':
+            queue.previous();
+            queue.broadcastUpdate();
+            break;
+        case 'pause':
+            queue.pause();
+            queue.broadcastUpdate();
+            break;
+        case 'skip':
+            queue.skip();
+            queue.broadcastUpdate();
+            break;
+        case 'stop':
+            queue.stop();
+            queue.broadcastUpdate();
+            break;
         case 'loop': {
             const modes = ['none', 'track', 'queue'];
             const current = loops.get(guildId) || 'none';
             loops.set(guildId, modes[(modes.indexOf(current) + 1) % modes.length]);
-            queue.updateNowPlaying(queue.songs[queue.current]);
+            queue.broadcastUpdate();
+            if (queue.songs[queue.current]) {
+                queue.updateNowPlaying(queue.songs[queue.current]);
+            }
             break;
         }
     }
