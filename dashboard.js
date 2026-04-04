@@ -101,7 +101,7 @@ async function loadGuilds() {
                      
                     <img src="${guild.icon
                         ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-                        : 'https://via.placeholder.com/40'}">
+                        : 'https://placehold.co/40x40/111118/5865F2?text=?'}">
 
                     <div class="guild-info">
                         <div class="guild-name">${guild.name}</div>
