@@ -230,11 +230,26 @@ class MusicQueue {
     async handleAutoplay() {
         const lastSong = this.songs[this.songs.length - 1];
         try {
-            // Search for tracks by the same artist
-            const search = await play.search(lastSong.author, { 
-                limit: 1,
-                source: { spotify: 'track' }
-            });
+            // Search for tracks by the same artist - try YouTube first
+            let search;
+            try {
+                search = await play.search(lastSong.author, { 
+                    limit: 1,
+                    source: { youtube: 'video' }
+                });
+            } catch (ytError) {
+                console.log('YouTube autoplay search failed, trying Spotify:', ytError.message);
+                if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+                    CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+                    CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                    search = await play.search(lastSong.author, { 
+                        limit: 1,
+                        source: { spotify: 'track' }
+                    });
+                } else {
+                    throw new Error('Both YouTube and Spotify search failed for autoplay');
+                }
+            }
             if (search[0]) {
                 const song = await createSongFromSearch(search[0], client.user.id);
                 await this.addSong(song);
@@ -416,8 +431,8 @@ function formatDuration(seconds) {
 // SLASH COMMANDS
 // ==========================================
 const commands = [
-    new SlashCommandBuilder().setName('play').setDescription('Play Spotify tracks').addStringOption(opt => opt.setName('query').setDescription('Song name or Spotify track URL').setRequired(true)),
-    new SlashCommandBuilder().setName('search').setDescription('Search Spotify tracks').addStringOption(opt => opt.setName('query').setDescription('Search term').setRequired(true)),
+    new SlashCommandBuilder().setName('play').setDescription('Play music from YouTube, Spotify, or search').addStringOption(opt => opt.setName('query').setDescription('Song name, YouTube URL, or Spotify track URL').setRequired(true)),
+    new SlashCommandBuilder().setName('search').setDescription('Search for music tracks').addStringOption(opt => opt.setName('query').setDescription('Search term').setRequired(true)),
     new SlashCommandBuilder().setName('skip').setDescription('Skip song').addIntegerOption(opt => opt.setName('amount').setDescription('Skip count')),
     new SlashCommandBuilder().setName('previous').setDescription('Previous song'),
     new SlashCommandBuilder().setName('stop').setDescription('Stop and clear'),
@@ -490,11 +505,6 @@ client.on('interactionCreate', async interaction => {
                     return interaction.editReply({ embeds: [createEmbed('Error', 'Already playing elsewhere!', CONFIG.errorColor)] });
                 }
 
-                // Check if Spotify integration is enabled
-                if (!CONFIG.enableSpotify) {
-                    return interaction.editReply({ embeds: [createEmbed('Error', 'Spotify integration is not configured. Please set ENABLE_SPOTIFY=true and provide valid SPOTIFY_CLIENT_ID/SPOTIFY_CLIENT_SECRET in .env', CONFIG.errorColor)] });
-                }
-
                 let searchResult;
                 if (query.includes('spotify.com') || query.includes('open.spotify.com')) {
                     console.log(`Getting Spotify content for URL: ${query}`);
@@ -504,21 +514,20 @@ client.on('interactionCreate', async interaction => {
                         throw new Error('Albums are not yet supported. Please use individual track URLs only.');
                     } else if (query.includes('/track/')) {
                         try {
-                            // For Spotify tracks, get basic info and then search for streamable version
-                            const trackId = query.split('/track/')[1].split('?')[0];
-                            console.log(`Processing Spotify track: ${trackId}`);
+                            // Get Spotify track info using play-dl
+                            const trackInfo = await play.spotify(query);
+                            console.log(`Processing Spotify track: ${trackInfo.name} by ${trackInfo.artists[0].name}`);
                             
-                            // Create a basic track object for now - in a full implementation, 
-                            // you'd use Spotify API to get track details
-                            const basicTrack = {
-                                id: trackId,
-                                title: 'Spotify Track', // Placeholder
-                                author: 'Unknown Artist', // Placeholder  
-                                url: query,
-                                duration_ms: 0,
-                                thumbnail: 'https://i.scdn.co/image/ab67616d0000b273000000000000000000000000'
+                            searchResult = { 
+                                video_details: {
+                                    id: trackInfo.id,
+                                    title: trackInfo.name,
+                                    author: trackInfo.artists[0].name,
+                                    url: query,
+                                    duration_ms: trackInfo.durationInMs,
+                                    thumbnail: trackInfo.thumbnail?.url || 'https://i.scdn.co/image/ab67616d0000b273000000000000000000000000'
+                                }
                             };
-                            searchResult = { video_details: basicTrack };
                         } catch (error) {
                             console.error('Spotify track processing error:', error);
                             throw new Error(`Failed to process Spotify track: ${error.message}`);
@@ -527,19 +536,50 @@ client.on('interactionCreate', async interaction => {
                         throw new Error('Unsupported Spotify URL type. Please use individual track URLs.');
                     }
                 } else if (query.includes('youtube.com') || query.includes('youtu.be')) {
-                    throw new Error('YouTube is not supported. Please use Spotify tracks, playlists, or albums only!');
-                } else {
-                    console.log(`Searching Spotify for: ${query}`);
                     try {
-                        const results = await play.search(query, { 
-                            limit: 1, 
-                            source: { spotify: 'track' } 
-                        });
-                        if (!results || !results[0]) throw new Error('No Spotify results found for that search');
-                        searchResult = { video_details: results[0] };
+                        console.log(`Getting YouTube content for URL: ${query}`);
+                        const videoInfo = await play.video_info(query);
+                        searchResult = { video_details: videoInfo.video_details };
                     } catch (error) {
-                        console.error('Spotify search error:', error);
-                        throw new Error(`Failed to search Spotify for "${query}": ${error.message}`);
+                        console.error('YouTube URL processing error:', error);
+                        throw new Error(`Failed to process YouTube URL: ${error.message}`);
+                    }
+                } else {
+                    // General search - try YouTube first, then Spotify if available
+                    console.log(`Searching for: ${query}`);
+                    try {
+                        // Try YouTube search first
+                        const ytResults = await play.search(query, { 
+                            limit: 1, 
+                            source: { youtube: 'video' } 
+                        });
+                        if (ytResults && ytResults[0]) {
+                            searchResult = { video_details: ytResults[0] };
+                        } else {
+                            throw new Error('No YouTube results found');
+                        }
+                    } catch (ytError) {
+                        console.log('YouTube search failed, trying Spotify if available:', ytError.message);
+                        if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+                            CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+                            CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                            try {
+                                const spResults = await play.search(query, { 
+                                    limit: 1, 
+                                    source: { spotify: 'track' } 
+                                });
+                                if (spResults && spResults[0]) {
+                                    searchResult = { video_details: spResults[0] };
+                                } else {
+                                    throw new Error('No Spotify results found');
+                                }
+                            } catch (spError) {
+                                console.error('Both YouTube and Spotify search failed');
+                                throw new Error(`No results found for "${query}"`);
+                            }
+                        } else {
+                            throw new Error(`YouTube search failed and Spotify is not configured: ${ytError.message}`);
+                        }
                     }
                 }
 
@@ -629,22 +669,42 @@ client.on('interactionCreate', async interaction => {
                 await interaction.deferReply();
                 
                 try {
-                    const results = await play.search(query, { 
-                        limit: CONFIG.searchLimit,
-                        source: { spotify: 'track' }
-                    });
+                    let results;
+                    let source = 'YouTube';
+                    
+                    // Try YouTube search first
+                    try {
+                        results = await play.search(query, { 
+                            limit: CONFIG.searchLimit,
+                            source: { youtube: 'video' }
+                        });
+                    } catch (ytError) {
+                        console.log('YouTube search failed, trying Spotify:', ytError.message);
+                        source = 'Spotify';
+                        if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+                            CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+                            CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                            results = await play.search(query, { 
+                                limit: CONFIG.searchLimit,
+                                source: { spotify: 'track' }
+                            });
+                        } else {
+                            throw new Error('YouTube search failed and Spotify is not configured');
+                        }
+                    }
+                    
                     if (!results || results.length === 0) {
-                        return interaction.editReply({ embeds: [createEmbed('No Results', 'No Spotify tracks found for that search', CONFIG.errorColor)] });
+                        return interaction.editReply({ embeds: [createEmbed('No Results', `No ${source} results found for that search`, CONFIG.errorColor)] });
                     }
                     
                     const desc = results.slice(0, CONFIG.searchLimit).map((song, i) => 
-                    `${i + 1}. [${song.title}](${song.url}) - ${song.artist || song.author || 'Unknown'}`
-                ).join('\n');
-                
-                const embed = createEmbed(`🔍 Spotify Search Results for "${query}"`, desc, CONFIG.color);
-                embed.setFooter({ text: 'Use /play with the song name or Spotify URL to add to queue' });
-                
-                interaction.editReply({ embeds: [embed] });
+                        `${i + 1}. [${song.title}](${song.url}) - ${song.artist || song.author || song.artists?.[0]?.name || 'Unknown'}`
+                    ).join('\n');
+                    
+                    const embed = createEmbed(`🔍 ${source} Search Results for "${query}"`, desc, CONFIG.color);
+                    embed.setFooter({ text: 'Use /play with the song name or URL to add to queue' });
+                    
+                    interaction.editReply({ embeds: [embed] });
                 } catch (error) {
                     console.error('Search command error:', error);
                     interaction.editReply({ embeds: [createEmbed('Search Error', `Failed to search for "${query}": ${error.message}`, CONFIG.errorColor)] });
