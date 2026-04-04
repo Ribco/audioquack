@@ -57,6 +57,17 @@ See `.env.example` for required configuration.
 5. Go to "OAuth2" section and copy client secret to `DISCORD_CLIENT_SECRET`
 6. Set redirect URI to your callback URL (default: `https://audioquack.bot.nu/auth/discord/callback`)
 
+### Spotify Integration Setup (Optional)
+
+To enable Spotify search and playback:
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new app
+3. Copy the Client ID to `SPOTIFY_CLIENT_ID`
+4. Copy the Client Secret to `SPOTIFY_CLIENT_SECRET`
+5. Set `ENABLE_SPOTIFY=true` in your `.env` file
+6. The bot will now support searching for and playing Spotify tracks
+
 ### Deployment
 
 The bot includes a built-in Express server for the dashboard. Deploy to a VPS or cloud service that supports persistent Node.js applications.

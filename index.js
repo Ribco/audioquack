@@ -51,7 +51,9 @@ const CONFIG = {
 // ==========================================
 // PLAY-DL SETUP
 // ==========================================
-if (CONFIG.spotifyClientId && CONFIG.spotifyClientSecret) {
+if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+    CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+    CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
     play.setToken({
         spotify: {
             client_id: CONFIG.spotifyClientId,
@@ -59,6 +61,8 @@ if (CONFIG.spotifyClientId && CONFIG.spotifyClientSecret) {
         }
     });
     console.log('✅ Spotify integration enabled');
+} else {
+    console.log('⚠️ Spotify integration disabled - configure SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env');
 }
 
 // ==========================================
@@ -484,6 +488,11 @@ client.on('interactionCreate', async interaction => {
                     await queue.connect();
                 } else if (queue.voiceChannel.id !== voiceChannel.id) {
                     return interaction.editReply({ embeds: [createEmbed('Error', 'Already playing elsewhere!', CONFIG.errorColor)] });
+                }
+
+                // Check if Spotify integration is enabled
+                if (!CONFIG.enableSpotify) {
+                    return interaction.editReply({ embeds: [createEmbed('Error', 'Spotify integration is not configured. Please set ENABLE_SPOTIFY=true and provide valid SPOTIFY_CLIENT_ID/SPOTIFY_CLIENT_SECRET in .env', CONFIG.errorColor)] });
                 }
 
                 let searchResult;
