@@ -164,26 +164,77 @@ class MusicQueue {
             console.log(`Playing: ${song.title} (${song.url})`);
             
             let stream;
+            let streamUrl = song.url;
+            
             if (song.url.includes('spotify.com')) {
                 // For Spotify tracks, search for a streamable version
                 try {
                     console.log(`Searching for streamable version of: ${song.title} by ${song.author}`);
-                    const searchResults = await play.search(`${song.title} ${song.author}`, { 
-                        limit: 1,
+                    const searchResults = await play.search(`${song.title} ${song.author} music`, { 
+                        limit: 3,
                         source: { youtube: 'video' } // Search YouTube for streaming
                     });
-                    if (searchResults && searchResults[0]) {
-                        console.log(`Found streamable version: ${searchResults[0].url}`);
-                        stream = await play.stream(searchResults[0].url, { quality: 2 });
+                    if (searchResults && searchResults.length > 0) {
+                        // Try each result until one works
+                        for (const result of searchResults) {
+                            try {
+                                console.log(`Trying to stream: ${result.url}`);
+                                stream = await play.stream(result.url, { quality: 2 });
+                                if (stream && stream.stream) {
+                                    console.log(`Successfully streaming: ${result.url}`);
+                                    break;
+                                }
+                            } catch (streamError) {
+                                console.log(`Failed to stream ${result.url}:`, streamError.message);
+                                continue;
+                            }
+                        }
+                        if (!stream || !stream.stream) {
+                            throw new Error('No streamable version found');
+                        }
                     } else {
-                        throw new Error('No streamable version found');
+                        throw new Error('No search results found');
                     }
                 } catch (searchError) {
                     console.log('Spotify search streaming failed:', searchError.message);
                     throw new Error(`Cannot find streamable version of Spotify track: ${searchError.message}`);
                 }
             } else {
-                stream = await play.stream(song.url, { quality: 2 });
+                // For YouTube URLs, try direct streaming first
+                try {
+                    stream = await play.stream(song.url, { quality: 2 });
+                } catch (directError) {
+                    console.log('Direct streaming failed, trying alternatives:', directError.message);
+                    // If direct streaming fails, search for the song and try alternatives
+                    try {
+                        const searchResults = await play.search(`${song.title} ${song.author} music`, { 
+                            limit: 3,
+                            source: { youtube: 'video' }
+                        });
+                        if (searchResults && searchResults.length > 0) {
+                            for (const result of searchResults) {
+                                if (result.url === song.url) continue; // Skip the original
+                                try {
+                                    console.log(`Trying alternative: ${result.url}`);
+                                    stream = await play.stream(result.url, { quality: 2 });
+                                    if (stream && stream.stream) {
+                                        console.log(`Successfully streaming alternative: ${result.url}`);
+                                        break;
+                                    }
+                                } catch (altError) {
+                                    console.log(`Failed to stream alternative ${result.url}:`, altError.message);
+                                    continue;
+                                }
+                            }
+                        }
+                        if (!stream || !stream.stream) {
+                            throw new Error('No alternative streams found');
+                        }
+                    } catch (searchError) {
+                        console.log('Alternative search failed:', searchError.message);
+                        throw directError; // Throw original error
+                    }
+                }
             }
             
             if (!stream || !stream.stream) {
@@ -230,25 +281,28 @@ class MusicQueue {
     async handleAutoplay() {
         const lastSong = this.songs[this.songs.length - 1];
         try {
-            // Search for tracks by the same artist - try YouTube first
+            // Search for tracks by the same artist - try Spotify first if configured
             let search;
-            try {
-                search = await play.search(lastSong.author, { 
-                    limit: 1,
-                    source: { youtube: 'video' }
-                });
-            } catch (ytError) {
-                console.log('YouTube autoplay search failed, trying Spotify:', ytError.message);
-                if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-                    CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-                    CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+            if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+                CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+                CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                try {
                     search = await play.search(lastSong.author, { 
                         limit: 1,
                         source: { spotify: 'track' }
                     });
-                } else {
-                    throw new Error('Both YouTube and Spotify search failed for autoplay');
+                } catch (spError) {
+                    console.log('Spotify autoplay search failed, trying YouTube:', spError.message);
+                    search = await play.search(`${lastSong.author} music`, { 
+                        limit: 1,
+                        source: { youtube: 'video' }
+                    });
                 }
+            } else {
+                search = await play.search(`${lastSong.author} music`, { 
+                    limit: 1,
+                    source: { youtube: 'video' }
+                });
             }
             if (search[0]) {
                 const song = await createSongFromSearch(search[0], client.user.id);
@@ -545,40 +599,43 @@ client.on('interactionCreate', async interaction => {
                         throw new Error(`Failed to process YouTube URL: ${error.message}`);
                     }
                 } else {
-                    // General search - try YouTube first, then Spotify if available
+                    // General search - try Spotify first if configured, then YouTube
                     console.log(`Searching for: ${query}`);
                     try {
-                        // Try YouTube search first
-                        const ytResults = await play.search(query, { 
-                            limit: 1, 
-                            source: { youtube: 'video' } 
-                        });
-                        if (ytResults && ytResults[0]) {
-                            searchResult = { video_details: ytResults[0] };
-                        } else {
-                            throw new Error('No YouTube results found');
-                        }
-                    } catch (ytError) {
-                        console.log('YouTube search failed, trying Spotify if available:', ytError.message);
+                        // Try Spotify search first if configured
                         if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
                             CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
                             CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
-                            try {
-                                const spResults = await play.search(query, { 
-                                    limit: 1, 
-                                    source: { spotify: 'track' } 
-                                });
-                                if (spResults && spResults[0]) {
-                                    searchResult = { video_details: spResults[0] };
-                                } else {
-                                    throw new Error('No Spotify results found');
-                                }
-                            } catch (spError) {
-                                console.error('Both YouTube and Spotify search failed');
-                                throw new Error(`No results found for "${query}"`);
+                            const spResults = await play.search(query, { 
+                                limit: 1, 
+                                source: { spotify: 'track' } 
+                            });
+                            if (spResults && spResults[0]) {
+                                searchResult = { video_details: spResults[0] };
+                            } else {
+                                throw new Error('No Spotify results found');
                             }
                         } else {
-                            throw new Error(`YouTube search failed and Spotify is not configured: ${ytError.message}`);
+                            throw new Error('Spotify not configured, trying YouTube');
+                        }
+                    } catch (spError) {
+                        console.log('Spotify search failed, trying YouTube:', spError.message);
+                        try {
+                            // Try YouTube search with music-specific query
+                            const ytResults = await play.search(`${query} music`, { 
+                                limit: 5,  // Get more results to find a streamable one
+                                source: { youtube: 'video' } 
+                            });
+                            if (ytResults && ytResults.length > 0) {
+                                // Find the first result that looks like music (has duration, etc.)
+                                const musicResult = ytResults.find(r => r.durationInSec && r.durationInSec > 30 && r.durationInSec < 600); // 30s to 10min
+                                searchResult = { video_details: musicResult || ytResults[0] };
+                            } else {
+                                throw new Error('No YouTube results found');
+                            }
+                        } catch (ytError) {
+                            console.error('Both Spotify and YouTube search failed');
+                            throw new Error(`No results found for "${query}"`);
                         }
                     }
                 }
@@ -670,27 +727,31 @@ client.on('interactionCreate', async interaction => {
                 
                 try {
                     let results;
-                    let source = 'YouTube';
+                    let source = 'Spotify';
                     
-                    // Try YouTube search first
-                    try {
-                        results = await play.search(query, { 
-                            limit: CONFIG.searchLimit,
-                            source: { youtube: 'video' }
-                        });
-                    } catch (ytError) {
-                        console.log('YouTube search failed, trying Spotify:', ytError.message);
-                        source = 'Spotify';
-                        if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
-                            CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
-                            CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                    // Try Spotify search first if configured
+                    if (CONFIG.enableSpotify && CONFIG.spotifyClientId && CONFIG.spotifyClientSecret && 
+                        CONFIG.spotifyClientId !== 'your-spotify-client-id' && 
+                        CONFIG.spotifyClientSecret !== 'your-spotify-client-secret') {
+                        try {
                             results = await play.search(query, { 
                                 limit: CONFIG.searchLimit,
                                 source: { spotify: 'track' }
                             });
-                        } else {
-                            throw new Error('YouTube search failed and Spotify is not configured');
+                        } catch (spError) {
+                            console.log('Spotify search failed, trying YouTube:', spError.message);
+                            source = 'YouTube';
+                            results = await play.search(`${query} music`, { 
+                                limit: CONFIG.searchLimit,
+                                source: { youtube: 'video' }
+                            });
                         }
+                    } else {
+                        source = 'YouTube';
+                        results = await play.search(`${query} music`, { 
+                            limit: CONFIG.searchLimit,
+                            source: { youtube: 'video' }
+                        });
                     }
                     
                     if (!results || results.length === 0) {
@@ -756,7 +817,7 @@ client.on('interactionCreate', async interaction => {
                 break;
             }
             case 'help': {
-                interaction.reply({ embeds: [createEmbed('🎵 Spotify Music Commands', '/play (song name or Spotify track URL), /search, /nowplaying, /pause, /resume, /skip, /stop, /queue, /volume, /loop, /shuffle, /remove, /clear, /autoplay, /disconnect, /stats', CONFIG.color)] });
+                interaction.reply({ embeds: [createEmbed('🎵 Music Commands', '/play (song name, YouTube URL, or Spotify track URL), /search, /nowplaying, /pause, /resume, /skip, /stop, /queue, /volume, /loop, /shuffle, /remove, /clear, /autoplay, /disconnect, /stats', CONFIG.color)] });
                 break;
             }
         }
