@@ -62,12 +62,12 @@ const CONFIG = {
 const manager = new Manager({
   nodes: [{
     host: 'audioquack-lavalink.onrender.com',
-    port: 2333,
+    port: 443,
     password: 'youshallnotpass',
-    secure: false,
+    secure: true,
     identifier: 'main',
-    retryAmount: 5,
-    retryDelay: 3000,
+    retryAmount: 10,
+    retryDelay: 5000,
 }],
     autoPlay: true,
    // plugins: [
@@ -385,9 +385,11 @@ const commands = [
 // ==========================================
 client.once('ready', async () => {
     console.log(`🤖 Bot logged in as ${client.user.tag}`);
-    
-    // Init Lavalink AFTER bot is ready
     manager.init(client.user.id);
+    
+    // Wait 15 seconds for Lavalink to connect
+    await new Promise(r => setTimeout(r, 15000));
+    console.log('Node connected:', manager.nodes.first()?.connected);
     
     const rest = new REST({ version: '10' }).setToken(CONFIG.token);
     try {
