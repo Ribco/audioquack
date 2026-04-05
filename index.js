@@ -48,12 +48,12 @@ const CONFIG = {
     enableAutoplay: process.env.ENABLE_AUTOPLAY !== 'false',
     logLevel: process.env.LOG_LEVEL || 'info',
     // Lavalink configuration
-   lavalink: {
-    host: 'lavalink.darrennathanael.com',
-    port: 443,
-    password: 'youshallnotpass',
-    secure: true
-  }
+  lavalink: {
+    host: 'nodes.jonakls.xyz',
+    port: 4500,
+    password: 'jonakls',
+    secure: false
+}
 };
 
 // ==========================================
