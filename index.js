@@ -60,9 +60,9 @@ const CONFIG = {
 // ERELA.JS SETUP
 // ==========================================
 const manager = new Manager({
-   nodes: [{
+  nodes: [{
     host: 'lavalink.techpoint.world',
-    port: 80,
+    port: 2333,
     password: 'techpoint',
     secure: false,
     identifier: 'main',
