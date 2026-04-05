@@ -49,10 +49,10 @@ const CONFIG = {
     logLevel: process.env.LOG_LEVEL || 'info',
     // Lavalink configuration
     lavalink: {
-        host: process.env.LAVALINK_HOST || 'localhost',
-        port: parseInt(process.env.LAVALINK_PORT) || 2333,
-        password: process.env.LAVALINK_PASSWORD || 'youshallnotpass',
-        secure: process.env.LAVALINK_SECURE === 'true'
+        host: 'localhost',
+        port: 2333,
+        password: 'youshallnotpass',
+        secure: 'true'
     }
 };
 
@@ -137,7 +137,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
     ]
 });
-
+client.on('raw', d => manager.updateVoiceState(d));
 class MusicQueue {
     constructor(guildId, voiceChannel, textChannel) {
         this.guildId = guildId;
@@ -382,6 +382,10 @@ const commands = [
 // ==========================================
 client.once('ready', async () => {
     console.log(`🤖 Bot logged in as ${client.user.tag}`);
+    
+    // Init Lavalink AFTER bot is ready
+    manager.init(client.user.id);
+    
     const rest = new REST({ version: '10' }).setToken(CONFIG.token);
     try {
         await rest.put(Routes.applicationCommands(CONFIG.clientId), { body: commands.map(c => c.toJSON()) });
