@@ -52,7 +52,7 @@ const CONFIG = {
         host: 'localhost',
         port: 2333,
         password: 'youshallnotpass',
-        secure: 'true'
+        secure: true
     }
 };
 
