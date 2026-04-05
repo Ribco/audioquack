@@ -68,7 +68,7 @@ const manager = new Manager({
     identifier: 'main',
     retryAmount: 10,
     retryDelay: 5000,
-}],
+}], // a
     autoPlay: true,
    // plugins: [
     //    new Spotify({
