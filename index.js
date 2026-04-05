@@ -49,10 +49,10 @@ const CONFIG = {
     logLevel: process.env.LOG_LEVEL || 'info',
     // Lavalink configuration
   lavalink: {
-    host: 'nodes.jonakls.xyz',
-    port: 4500,
-    password: 'jonakls',
-    secure: false
+    host: 'lavalink.lexnet.cc',
+    port: 443,
+    password: 'lexn3tl@val!nk',
+    secure: true
 }
 };
 
