@@ -61,10 +61,10 @@ const CONFIG = {
 // ==========================================
 const manager = new Manager({
   nodes: [{
-    host: 'lavalink.techpoint.world',
-    port: 2333,
-    password: 'techpoint',
-    secure: false,
+    host: 'audioquack-lavalink.onrender.com',
+    port: 443,
+    password: 'youshallnotpass',
+    secure: true,
     identifier: 'main',
     retryAmount: 5,
     retryDelay: 3000,
