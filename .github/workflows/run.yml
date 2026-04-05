@@ -15,7 +15,7 @@ jobs:
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
       CALLBACK_URL: ${{ secrets.CALLBACK_URL }}
       DASHBOARD_SECRET: ${{ secrets.DASHBOARD_SECRET }}
-      ENABLE_SPOTIFY: "true"
+      ENABLE_SPOTIFY: "false"
       LAVALINK_HOST: "lavalink.jirayu.net"
       LAVALINK_PORT: "13592"
       LAVALINK_PASSWORD: "youshallnotpass"
