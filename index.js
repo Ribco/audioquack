@@ -61,9 +61,9 @@ const CONFIG = {
 // ==========================================
 const manager = new Manager({
   nodes: [{
-    host: 'lavalink.techpoint.world',
+    host: 'lavalink.clxud.wtf',
     port: 2333,
-    password: 'techpoint',
+    password: 'youshallnotpass',
     secure: false,
     identifier: 'main',
     retryAmount: 5,
