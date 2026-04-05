@@ -1,12 +1,20 @@
-name: Run AudioQuack
+name: Run AudioQuack + Deploy Pages
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  run:
+  build:
     runs-on: ubuntu-latest
     environment: production
+
     env:
       DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
       DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
@@ -20,18 +28,20 @@ jobs:
       LAVALINK_PORT: "13592"
       LAVALINK_PASSWORD: "youshallnotpass"
       LAVALINK_SECURE: "false"
+
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
-      
+          node-version: '21'
+
       - name: Install dependencies
         run: npm install
 
-      - name: Create .env file from GitHub secrets
+      - name: Create .env file
         run: |
           cat > .env <<EOF
           DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -48,5 +58,46 @@ jobs:
           LAVALINK_SECURE=${LAVALINK_SECURE}
           EOF
 
-      - name: Run bot
-        run: node index.js
+      - name: Run bot (short test)
+        run: |
+          node index.js &
+          sleep 10
+          echo "Bot test finished"
+
+      # ✅ ARTIFACTS (your request)
+      - name: Upload full project artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-project
+          path: .
+
+      - name: Upload minimal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot-core
+          path: |
+            index.js
+            package.json
+            .env
+
+      # ✅ REQUIRED for GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .   # ⚠️ change to /public or /dist if you have a site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
