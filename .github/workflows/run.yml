@@ -1,10 +1,8 @@
 name: Run AudioQuack
-
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -18,7 +16,10 @@ jobs:
       CALLBACK_URL: ${{ secrets.CALLBACK_URL }}
       DASHBOARD_SECRET: ${{ secrets.DASHBOARD_SECRET }}
       ENABLE_SPOTIFY: "true"
-
+      LAVALINK_HOST: "lavalink.jirayu.net"
+      LAVALINK_PORT: "13592"
+      LAVALINK_PASSWORD: "youshallnotpass"
+      LAVALINK_SECURE: "false"
     steps:
       - uses: actions/checkout@v3
       
@@ -41,6 +42,10 @@ jobs:
           DASHBOARD_SECRET=${DASHBOARD_SECRET}
           CALLBACK_URL=${CALLBACK_URL}
           ENABLE_SPOTIFY=${ENABLE_SPOTIFY}
+          LAVALINK_HOST=${LAVALINK_HOST}
+          LAVALINK_PORT=${LAVALINK_PORT}
+          LAVALINK_PASSWORD=${LAVALINK_PASSWORD}
+          LAVALINK_SECURE=${LAVALINK_SECURE}
           EOF
 
       - name: Run bot
