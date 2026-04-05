@@ -52,7 +52,7 @@ const CONFIG = {
     host: 'lavalink.lexnet.cc',
     port: 443,
     password: 'lexn3tl@val!nk',
-    secure: true
+    secure: false
 }
 };
 
