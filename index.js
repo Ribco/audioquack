@@ -62,7 +62,7 @@ const CONFIG = {
 const manager = new Manager({
   nodes: [{
     host: 'audioquack-lavalink.onrender.com',
-    port: 443,
+    port: 10000,
     password: 'youshallnotpass',
     secure: true,
     identifier: 'main',
