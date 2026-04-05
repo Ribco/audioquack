@@ -402,7 +402,7 @@ client.once('ready', async () => {
 function updatePresence() {
     const guildCount = client.guilds.cache.size;
     client.user.setPresence({
-        activities: [{ name: `Spotify Music | ${guildCount} servers`, type: 2 }], // Listening
+        activities: [{ name: `audioquack.bot.nu | ${guildCount} servers`, type: 2 }], // Listening
         status: 'online',
     });
 }
