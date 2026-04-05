@@ -60,7 +60,6 @@ const CONFIG = {
 // ERELA.JS SETUP
 // ==========================================
 const manager = new Manager({
-    const manager = new Manager({
     nodes: [{
         host: 'lavalink.lexnet.cc',
         port: 443,
