@@ -60,15 +60,15 @@ const CONFIG = {
 // ERELA.JS SETUP
 // ==========================================
 const manager = new Manager({
-    nodes: [{
-        host: 'lavalink.lexnet.cc',
-        port: 443,
-        password: 'lexn3tl@val!nk',
-        secure: true,
-        identifier: 'main',
-        retryAmount: 5,
-        retryDelay: 3000,
-    }],
+   nodes: [{
+    host: 'lavalink.lexnet.cc',
+    port: 80,
+    password: 'lexn3tl@val!nk',
+    secure: false,
+    identifier: 'main',
+    retryAmount: 5,
+    retryDelay: 3000,
+}],
     autoPlay: true,
    // plugins: [
     //    new Spotify({
