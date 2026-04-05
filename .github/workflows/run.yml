@@ -11,9 +11,9 @@ permissions:
   id-token: write
 
 jobs:
-upload:
-runs-on: ubuntu-latest
-steps:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
 
       # ✅ ARTIFACTS (your request)
       - name: Upload full project artifact
@@ -38,7 +38,7 @@ steps:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .   # ⚠️ change to /public or /dist if you have a site
+          path: ./   # ⚠️ change to /public or /dist if you have a site
 
   deploy:
     needs: build
@@ -52,6 +52,7 @@ steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
   build:
     runs-on: ubuntu-latest
     environment: production
@@ -81,7 +82,6 @@ steps:
 
       - name: Install dependencies
         run: npm install @discordjs/voice@latest discord.js@latest erela.js@latest express@latest socket.io@latest express-session@latest passport@latest passport-discord@latest dotenv@latest cors@latest path@latest
-        
 
       - name: Create .env file
         run: |
@@ -105,5 +105,3 @@ steps:
           node index.js &
           sleep 10
           echo "Bot test finished"
-          
-
