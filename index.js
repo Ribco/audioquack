@@ -52,7 +52,7 @@ const CONFIG = {
     host: 'lavalink.lexnet.cc',
     port: 443,
     password: 'lexn3tl@val!nk',
-    secure: false
+    secure: true
 }
 };
 
@@ -60,11 +60,15 @@ const CONFIG = {
 // ERELA.JS SETUP
 // ==========================================
 const manager = new Manager({
+    const manager = new Manager({
     nodes: [{
-        host: CONFIG.lavalink.host,
-        port: CONFIG.lavalink.port,
-        password: CONFIG.lavalink.password,
-        secure: CONFIG.lavalink.secure,
+        host: 'lavalink.lexnet.cc',
+        port: 443,
+        password: 'lexn3tl@val!nk',
+        secure: true,
+        identifier: 'main',
+        retryAmount: 5,
+        retryDelay: 3000,
     }],
     autoPlay: true,
    // plugins: [
