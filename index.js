@@ -13,7 +13,7 @@ const {
     AudioPlayerStatus, VoiceConnectionStatus, entersState 
 } = require('@discordjs/voice');
 const { Manager } = require('erela.js');
-const Spotify = require('erela.js-spotify');
+// const Spotify = require('erela.js-spotify');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -30,8 +30,8 @@ const CONFIG = {
     token: process.env.DISCORD_TOKEN,
     clientId: process.env.DISCORD_CLIENT_ID || "1489574284572495944",
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
-    spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  //  spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
+  //  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
     dashboardSecret: process.env.DASHBOARD_SECRET || 'super-secret-key-quack-quackify',
     callbackURL: process.env.CALLBACK_URL || `http://localhost:${process.env.PORT || 3000}/auth/discord/callback`,
     port: process.env.PORT || 3000,
@@ -67,12 +67,12 @@ const manager = new Manager({
         secure: CONFIG.lavalink.secure,
     }],
     autoPlay: true,
-    plugins: [
-        new Spotify({
-            clientId: CONFIG.spotifyClientId,
-            clientSecret: CONFIG.spotifyClientSecret,
-        }),
-    ],
+   // plugins: [
+    //    new Spotify({
+    //        clientId: CONFIG.spotifyClientId,
+     //       clientSecret: CONFIG.spotifyClientSecret,
+    //    }),
+  //  ],
     send: (id, payload) => {
         const guild = client.guilds.cache.get(id);
         if (guild) guild.shard.send(payload);
