@@ -426,9 +426,13 @@ client.on('interactionCreate', async interaction => {
 
     try {
         switch (commandName) {
-            case 'play': {
-                const query = interaction.options.getString('query');
-                await interaction.deferReply();
+           case 'play': {
+    const query = interaction.options.getString('query');
+    await interaction.deferReply();
+
+    if (!manager.nodes.first()?.connected) {
+        return interaction.editReply({ embeds: [createEmbed('Error', 'Music node is still connecting, please wait a few seconds and try again!', CONFIG.errorColor)] });
+    }
                 
                 if (!queue) {
                     queue = new MusicQueue(guildId, voiceChannel, channel);
