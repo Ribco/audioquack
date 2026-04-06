@@ -11,52 +11,9 @@ permissions:
   id-token: write
 
 jobs:
-  upload:
-    runs-on: ubuntu-latest
-    steps:
-
-      # ✅ ARTIFACTS (your request)
-      - name: Upload full project artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: full-project
-          path: /
-
-      - name: Upload minimal artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bot-core
-          path:  |
-            index.js
-            package.json
-            .env
-
-      # ✅ REQUIRED for GitHub Pages
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./   # ⚠️ change to /public or /dist if you have a site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
   build:
     runs-on: ubuntu-latest
     environment: production
-
     env:
       DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
       DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
@@ -73,10 +30,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '21'
 
@@ -105,3 +62,39 @@ jobs:
           node index.js &
           sleep 10
           echo "Bot test finished"
+
+      # --- ARTIFACT UPLOADS ---
+      - name: Upload full project artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-project
+          path: .
+
+      - name: Upload minimal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot-core
+          path: |
+            index.js
+            package.json
+            .env
+
+      # --- PAGES PREPARATION ---
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./ 
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
