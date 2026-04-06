@@ -35,7 +35,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '21'
+          node-version: '24'
+
+      - name: Setup npm
+        run: npm install -g npm@latest
+        shell: bash
 
       - name: Install dependencies
         run: npm install @discordjs/voice@latest discord.js@latest erela.js@latest express@latest socket.io@latest express-session@latest passport@latest passport-discord@latest dotenv@latest cors@latest path@latest
@@ -63,7 +67,6 @@ jobs:
           sleep 10
           echo "Bot test finished"
 
-      # --- ARTIFACT UPLOADS ---
       - name: Upload full project artifact
         uses: actions/upload-artifact@v4
         with:
@@ -79,14 +82,13 @@ jobs:
             package.json
             .env
 
-      # --- PAGES PREPARATION ---
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./ 
+          path: ./
 
   deploy:
     needs: build
